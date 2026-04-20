@@ -10,6 +10,7 @@ Aplikasi web Streamlit untuk tracking attendance, stamp loyalty, reward, leaderb
 - Dedup attendance jika kombinasi `player + session_id` sama
 - Unique player ID dari nama dan nomor HP
 - KPI komunitas, leaderboard, recent activity, chart trend attendance
+- Session generator untuk membuat `session_id` dan `session_code`
 - Player dashboard dengan search nama atau nomor HP
 - Reward milestone:
   - 3 stamp: free drink/snack
@@ -28,8 +29,10 @@ Aplikasi web Streamlit untuk tracking attendance, stamp loyalty, reward, leaderb
 |   `-- Code.gs
 |-- pages/
 |   |-- admin_insights.py
+|   |-- home.py
 |   |-- leaderboard.py
-|   `-- player_dashboard.py
+|   |-- player_dashboard.py
+|   `-- session_generator.py
 |-- utils/
 |   |-- __init__.py
 |   |-- app_data.py
@@ -47,11 +50,18 @@ Aplikasi web Streamlit untuk tracking attendance, stamp loyalty, reward, leaderb
 Saran struktur dalam satu file Google Sheets:
 
 - `Form_Responses`: raw data dari Google Form, jangan diedit manual
+- `sessions`: daftar session valid dari Session Generator
 - `players_db`: database player hasil olahan, bisa dibuat nanti
 - `referral_log`: log referral valid/invalid, bisa dibuat nanti
 - `reward_log`: log reward yang sudah diclaim, bisa dibuat nanti
 
 Untuk step awal, cukup pakai `Form_Responses` dari Google Form.
+
+Format tab `sessions` yang disarankan:
+
+| session_id | session_code | venue | session_date | session_slot | status | created_at |
+|---|---|---|---|---|---|---|
+| SPC-20260420-NEO-PADEL-JATIWARINGIN-MORNING | A7K2Q9 | Neo Padel Jatiwaringin | 2026-04-20 | Morning | open | 2026-04-20 07:00:00 |
 
 Field Google Form yang disarankan:
 
