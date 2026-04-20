@@ -3,13 +3,13 @@ from __future__ import annotations
 import streamlit as st
 
 from utils.auth import is_admin_authenticated, logout_admin
-from utils.ui import apply_theme, render_sidebar_brand
+from utils.ui import apply_theme
 
 
 apply_theme()
 
 with st.sidebar:
-    render_sidebar_brand()
+    st.markdown("### Sunmory Padel Club")
     if is_admin_authenticated():
         st.success("Admin mode aktif")
         if st.button("Logout Admin", use_container_width=True):

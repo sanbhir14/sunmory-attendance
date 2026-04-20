@@ -4,11 +4,12 @@ import streamlit as st
 
 from utils.app_data import load_app_data
 from utils.data_processing import build_leaderboard
-from utils.ui import dataframe_dates, page_header, rank_label
+from utils.ui import dataframe_dates, rank_label
 
 attendance_df, _, _ = load_app_data()
 
-page_header("Leaderboard", "Ranking player berdasarkan total stamp.", eyebrow="Player Area")
+st.title("Leaderboard")
+st.caption("Ranking player berdasarkan total stamp.")
 
 venues = ["All venues"] + sorted(attendance_df["venue"].dropna().unique().tolist()) if not attendance_df.empty else ["All venues"]
 

@@ -1,12 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import pandas as pd
 import streamlit as st
-
-
-LOGO_PATH = Path("assets/logo.png")
 
 
 def apply_theme() -> None:
@@ -20,54 +15,27 @@ def apply_theme() -> None:
         """
         <style>
         :root {
-            --sunmory-ink: #13201e;
-            --sunmory-muted: #62716d;
-            --sunmory-line: #e7dfcf;
+            --sunmory-ink: #14213d;
+            --sunmory-muted: #5d6979;
+            --sunmory-line: #e6e8ec;
             --sunmory-card: #ffffff;
-            --sunmory-soft: #fff7df;
-            --sunmory-bg: #f8f4e8;
-            --sunmory-teal: #0f4c4c;
-            --sunmory-green: #2e7d59;
-            --sunmory-amber: #f59e0b;
-            --sunmory-gold: #f2c94c;
-            --sunmory-coral: #e85d04;
-            --sunmory-shadow: rgba(36, 27, 12, 0.08);
+            --sunmory-soft: #fffaf0;
+            --sunmory-green: #1b8a5a;
+            --sunmory-yellow: #f2c94c;
+            --sunmory-shadow: rgba(20, 33, 61, 0.05);
         }
         @media (prefers-color-scheme: dark) {
             :root {
-                --sunmory-ink: #f9f4e7;
-                --sunmory-muted: #c8d0c7;
-                --sunmory-line: #31413b;
-                --sunmory-card: #121a18;
-                --sunmory-soft: #221c10;
-                --sunmory-bg: #090f0e;
+                --sunmory-ink: #f5f7fb;
+                --sunmory-muted: #b7c0ce;
+                --sunmory-line: #343b49;
+                --sunmory-card: #171c26;
+                --sunmory-soft: #251f11;
                 --sunmory-shadow: rgba(0, 0, 0, 0.18);
             }
         }
-        html, body, [data-testid="stAppViewContainer"] {
-            background:
-                radial-gradient(circle at top left, rgba(245, 158, 11, 0.12), transparent 32rem),
-                linear-gradient(180deg, var(--sunmory-bg), var(--sunmory-bg));
-        }
-        [data-testid="stSidebar"] {
-            border-right: 1px solid var(--sunmory-line);
-        }
-        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
-        [data-testid="stSidebar"] span,
-        [data-testid="stSidebar"] label {
-            color: var(--sunmory-ink);
-        }
-        [data-testid="stSidebarNav"] a {
-            border-radius: 8px;
-            margin: 2px 0;
-        }
-        [data-testid="stSidebarNav"] a[aria-current="page"] {
-            background: rgba(245, 158, 11, 0.16);
-            color: var(--sunmory-ink);
-            font-weight: 700;
-        }
         .main .block-container {
-            padding-top: 2.25rem;
+            padding-top: 2rem;
             padding-bottom: 3rem;
             max-width: 1180px;
         }
@@ -75,90 +43,23 @@ def apply_theme() -> None:
             letter-spacing: 0;
             color: var(--sunmory-ink);
         }
-        h1 {
-            font-size: clamp(2.1rem, 5vw, 3.4rem);
-            line-height: 1.05;
-        }
-        h2 {
-            margin-top: 1.6rem;
-        }
         p, label, span {
             letter-spacing: 0;
-        }
-        .sunmory-brand {
-            border: 1px solid var(--sunmory-line);
-            border-radius: 8px;
-            padding: 12px;
-            background: var(--sunmory-card);
-            box-shadow: 0 8px 22px var(--sunmory-shadow);
-            margin-bottom: 12px;
-        }
-        .sunmory-brand-title {
-            color: var(--sunmory-ink);
-            font-weight: 800;
-            letter-spacing: 0;
-            margin: 0;
-        }
-        .sunmory-brand-subtitle {
-            color: var(--sunmory-muted);
-            font-size: 0.82rem;
-            margin-top: 2px;
-        }
-        .sunmory-header {
-            border: 1px solid var(--sunmory-line);
-            border-radius: 8px;
-            padding: 22px 24px;
-            margin-bottom: 18px;
-            background:
-                linear-gradient(135deg, rgba(15, 76, 76, 0.10), rgba(245, 158, 11, 0.10)),
-                var(--sunmory-card);
-            box-shadow: 0 12px 30px var(--sunmory-shadow);
-        }
-        .sunmory-eyebrow {
-            color: var(--sunmory-amber);
-            font-weight: 800;
-            text-transform: uppercase;
-            font-size: 0.76rem;
-            letter-spacing: 0.08em;
-            margin-bottom: 8px;
-        }
-        .sunmory-title {
-            color: var(--sunmory-ink);
-            font-size: clamp(2rem, 5vw, 3.2rem);
-            font-weight: 850;
-            line-height: 1.05;
-            margin: 0;
-        }
-        .sunmory-caption {
-            color: var(--sunmory-muted);
-            margin-top: 10px;
-            max-width: 780px;
         }
         div[data-testid="stMetric"] {
             background: var(--sunmory-card);
             border: 1px solid var(--sunmory-line);
             border-radius: 8px;
-            padding: 16px 18px;
-            box-shadow: 0 10px 24px var(--sunmory-shadow);
-            position: relative;
-            overflow: hidden;
-        }
-        div[data-testid="stMetric"]::before {
-            content: "";
-            position: absolute;
-            inset: 0 0 auto 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--sunmory-teal), var(--sunmory-amber));
+            padding: 14px 16px;
+            box-shadow: 0 8px 20px var(--sunmory-shadow);
         }
         div[data-testid="stMetricLabel"] p,
         div[data-testid="stMetricLabel"] {
             color: var(--sunmory-muted);
-            font-weight: 700;
         }
         div[data-testid="stMetricValue"],
         div[data-testid="stMetricValue"] div {
             color: var(--sunmory-ink);
-            font-weight: 850;
         }
         div[data-testid="stMetricDelta"] {
             color: var(--sunmory-muted);
@@ -172,7 +73,7 @@ def apply_theme() -> None:
             color: var(--sunmory-ink);
         }
         .top-player {
-            border-left: 4px solid var(--sunmory-amber);
+            border-left: 4px solid var(--sunmory-yellow);
             padding: 10px 12px;
             background: var(--sunmory-soft);
             border-radius: 8px;
@@ -187,56 +88,7 @@ def apply_theme() -> None:
             border-radius: 8px;
             overflow: hidden;
         }
-        .stButton > button,
-        [data-testid="stDownloadButton"] button {
-            border-radius: 8px;
-            border: 1px solid var(--sunmory-line);
-            background: linear-gradient(135deg, var(--sunmory-teal), var(--sunmory-green));
-            color: #ffffff;
-            font-weight: 800;
-        }
-        .stButton > button:hover,
-        [data-testid="stDownloadButton"] button:hover {
-            border-color: var(--sunmory-amber);
-            color: #ffffff;
-        }
-        div[data-baseweb="input"] > div,
-        div[data-baseweb="select"] > div {
-            border-radius: 8px;
-            border-color: var(--sunmory-line);
-        }
         </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def has_logo() -> bool:
-    return LOGO_PATH.exists()
-
-
-def render_sidebar_brand() -> None:
-    if has_logo():
-        st.image(str(LOGO_PATH), use_container_width=True)
-    st.markdown(
-        """
-        <div class="sunmory-brand">
-            <p class="sunmory-brand-title">Sunmory Padel Club</p>
-            <div class="sunmory-brand-subtitle">Attendance • Stamp • Reward</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def page_header(title: str, caption: str, eyebrow: str = "Sunmory Padel Club") -> None:
-    st.markdown(
-        f"""
-        <div class="sunmory-header">
-            <div class="sunmory-eyebrow">{eyebrow}</div>
-            <div class="sunmory-title">{title}</div>
-            <div class="sunmory-caption">{caption}</div>
-        </div>
         """,
         unsafe_allow_html=True,
     )
