@@ -11,7 +11,7 @@ from utils.data_processing import (
     dashboard_metrics,
     players_near_reward,
 )
-from utils.ui import dataframe_dates, format_date, page_header, show_empty_state
+from utils.ui import dataframe_dates, format_date, page_header, render_logo, show_empty_state
 
 
 require_admin()
@@ -19,6 +19,7 @@ require_admin()
 attendance_df, player_summary, source_message = load_app_data()
 metrics = dashboard_metrics(attendance_df, player_summary)
 
+render_logo(width=180)
 page_header(
     "Sunmory Padel Club",
     "Dashboard komunitas untuk attendance, stamp, reward, dan leaderboard player.",
