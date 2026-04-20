@@ -243,11 +243,6 @@ def has_logo() -> bool:
     return LOGO_PATH.exists()
 
 
-def render_logo(width: int = 180) -> None:
-    if has_logo():
-        st.image(str(LOGO_PATH), width=width)
-
-
 def render_sidebar_brand() -> None:
     if has_logo():
         st.image(str(LOGO_PATH), use_container_width=True)
