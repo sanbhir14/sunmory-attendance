@@ -7,6 +7,7 @@ import streamlit as st
 
 from utils.auth import require_admin
 from utils.session_tools import build_session_record, generate_session_code, session_record_to_csv
+from utils.ui import page_header
 
 
 require_admin()
@@ -37,8 +38,7 @@ def write_session_to_google_sheets(record: dict) -> tuple[bool, str]:
     return True, f"Session {record['session_code']} berhasil ditulis ke tab sessions."
 
 
-st.title("Session Generator")
-st.caption("Bikin session code untuk check-in event Sunmory.")
+page_header("Session Generator", "Bikin session code untuk check-in event Sunmory.", eyebrow="Admin Area")
 
 webhook_enabled = bool(secret_value("SESSION_WEBHOOK_URL"))
 if webhook_enabled:

@@ -6,14 +6,17 @@ import streamlit as st
 from utils.app_data import load_app_data
 from utils.auth import require_admin
 from utils.data_processing import find_player
-from utils.ui import dataframe_dates, format_date
+from utils.ui import dataframe_dates, format_date, page_header
 
 require_admin()
 
 attendance_df, player_summary, _ = load_app_data()
 
-st.title("Player Dashboard")
-st.caption("Cari player dari nama atau nomor HP untuk cek stamp, reward, dan history session.")
+page_header(
+    "Player Dashboard",
+    "Cari player dari nama atau nomor HP untuk cek stamp, reward, dan history session.",
+    eyebrow="Admin Area",
+)
 
 query = st.text_input("Nama atau nomor HP", placeholder="Contoh: Sandi atau 0812...")
 matches = find_player(player_summary, query)

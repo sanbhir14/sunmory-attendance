@@ -27,6 +27,8 @@ Aplikasi web Streamlit untuk tracking attendance, stamp loyalty, reward, leaderb
 ```text
 .
 |-- app.py
+|-- assets/
+|   `-- logo.png
 |-- google_apps_script/
 |   `-- Code.gs
 |-- pages/
@@ -45,6 +47,31 @@ Aplikasi web Streamlit untuk tracking attendance, stamp loyalty, reward, leaderb
 |   `-- secrets.toml.example
 |-- requirements.txt
 `-- README.md
+```
+
+## Logo dan Branding
+
+Masukkan file logo PNG ke:
+
+```text
+assets/logo.png
+```
+
+Setelah file itu ada, app otomatis menampilkan logo di sidebar. Kalau belum ada, app tetap jalan dengan brand text fallback.
+
+Palette UI memakai warna logo:
+
+- Deep teal untuk trust/sport
+- Court green untuk aksen komunitas
+- Sunrise amber/gold untuk energi Sunmory
+- Ivory/off-white sebagai background utama
+
+Commit dan push setelah menambahkan logo:
+
+```bash
+git add assets/logo.png
+git commit -m "Add Sunmory logo"
+git push
 ```
 
 ## Struktur Google Sheets

@@ -6,14 +6,17 @@ import streamlit as st
 from utils.app_data import load_app_data
 from utils.auth import require_admin
 from utils.data_processing import monthly_attendance, players_near_reward, repeat_vs_new
-from utils.ui import dataframe_dates
+from utils.ui import dataframe_dates, page_header
 
 require_admin()
 
 attendance_df, player_summary, _ = load_app_data()
 
-st.title("Admin Insights")
-st.caption("Ringkasan operasional komunitas untuk venue, repeat player, dan reward.")
+page_header(
+    "Admin Insights",
+    "Ringkasan operasional komunitas untuk venue, repeat player, dan reward.",
+    eyebrow="Admin Area",
+)
 
 if attendance_df.empty:
     st.info("Belum ada data attendance.")

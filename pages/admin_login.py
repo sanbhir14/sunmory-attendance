@@ -3,10 +3,14 @@ from __future__ import annotations
 import streamlit as st
 
 from utils.auth import authenticate_admin, get_admin_password, is_admin_authenticated
+from utils.ui import page_header
 
 
-st.title("Admin Login")
-st.caption("Masuk untuk membuka Home, Session Generator, dan Admin Insights.")
+page_header(
+    "Admin Login",
+    "Masuk untuk membuka Home, Session Generator, Player Dashboard, dan Admin Insights.",
+    eyebrow="Admin Area",
+)
 
 if is_admin_authenticated():
     st.success("Admin sudah login.")
