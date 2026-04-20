@@ -23,6 +23,32 @@ def performance_webhook_token() -> str:
 
 
 @st.cache_data(ttl=60, show_spinner=False)
+def load_open_sessions() -> tuple[pd.DataFrame, str]:
+    webhook_url = performance_webhook_url()
+    if not webhook_url:
+        return pd.DataFrame(), "SESSION_WEBHOOK_URL belum diset."
+
+    try:
+        response = requests.get(webhook_url, params={"action": "open_sessions"}, timeout=20)
+        response.raise_for_status()
+        result = response.json()
+    except Exception as exc:
+        return pd.DataFrame(), f"Gagal membaca sessions: {exc}"
+
+    if not result.get("ok"):
+        return pd.DataFrame(), result.get("error", "Gagal membaca sessions.")
+
+    sessions = pd.DataFrame(result.get("data", []))
+    if sessions.empty:
+        return sessions, "Belum ada session open."
+
+    for column in ["session_id", "session_code", "venue", "session_date", "session_slot", "status"]:
+        if column not in sessions.columns:
+            sessions[column] = ""
+    return sessions, "Open sessions dari Google Sheets"
+
+
+@st.cache_data(ttl=60, show_spinner=False)
 def load_performance_data() -> tuple[pd.DataFrame, pd.DataFrame, str]:
     webhook_url = performance_webhook_url()
     if not webhook_url:

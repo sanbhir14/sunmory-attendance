@@ -52,6 +52,9 @@ function doGet(e) {
     if (action === 'performance_summary') {
       return jsonResponse_({ ok: true, data: getPerformanceSummary_() });
     }
+    if (action === 'open_sessions') {
+      return jsonResponse_({ ok: true, data: getOpenSessions_() });
+    }
     return jsonResponse_({ ok: false, error: 'Unsupported action' }, 400);
   } catch (error) {
     return jsonResponse_({ ok: false, error: String(error.message || error) }, 500);
@@ -104,6 +107,26 @@ function appendSession_(record) {
   const row = header.map((key) => record[key] || '');
   sheet.appendRow(row);
   sheet.autoResizeColumns(1, header.length);
+}
+
+function getOpenSessions_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(CONFIG.sessionsSheetName);
+  if (!sheet || sheet.getLastRow() < 2) return [];
+
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0].map((header) => String(header || '').trim());
+  return values
+    .slice(1)
+    .map((row) => {
+      const record = {};
+      headers.forEach((header, index) => {
+        record[header] = row[index];
+      });
+      return record;
+    })
+    .filter((record) => String(record.status || '').toLowerCase() === 'open')
+    .sort((a, b) => String(b.session_date || '').localeCompare(String(a.session_date || '')));
 }
 
 function appendPerformanceRecords_(records) {

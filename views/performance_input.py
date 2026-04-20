@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from datetime import date
-
 import pandas as pd
 import streamlit as st
 
 from utils.auth import require_admin
-from utils.performance import prepare_performance_records, submit_performance_records
+from utils.performance import load_open_sessions, prepare_performance_records, submit_performance_records
 
 
 require_admin()
@@ -14,21 +12,41 @@ require_admin()
 st.title("Performance Input")
 st.caption("Input poin dan hasil match per session. Data akan masuk ke tab `performance_log`.")
 
+sessions, sessions_message = load_open_sessions()
+if sessions_message != "Open sessions dari Google Sheets":
+    st.info(sessions_message)
+
 with st.form("performance_session_form"):
-    col1, col2 = st.columns(2)
-    with col1:
-        session_id = st.text_input("Session ID", placeholder="Contoh: SPC-20260420-NEO-PADEL-JATIWARINGIN-MORNING")
-        session_code = st.text_input("Session Code", placeholder="Contoh: A7K2Q9")
-        session_date = st.date_input("Tanggal session", value=date.today())
-    with col2:
-        venue = st.selectbox(
-            "Venue",
-            [
-                "Neo Padel Jatiwaringin",
-                "Victoria Social Club Kemang",
-            ],
+    if not sessions.empty:
+        sessions = sessions.reset_index(drop=True)
+        sessions["label"] = (
+            sessions["session_date"].astype(str)
+            + " - "
+            + sessions["venue"].astype(str)
+            + " - "
+            + sessions["session_slot"].astype(str)
+            + " ("
+            + sessions["session_code"].astype(str)
+            + ")"
         )
-        auto_points = st.checkbox("Auto hitung poin: win 3, lose 1", value=True)
+        selected_label = st.selectbox("Pilih open session", sessions["label"].tolist())
+        selected_session = sessions[sessions["label"] == selected_label].iloc[0]
+
+        col1, col2, col3 = st.columns(3)
+        col1.text_input("Session ID", value=str(selected_session["session_id"]), disabled=True)
+        col2.text_input("Session Code", value=str(selected_session["session_code"]), disabled=True)
+        col3.text_input("Tanggal session", value=str(selected_session["session_date"]), disabled=True)
+        st.text_input("Venue", value=str(selected_session["venue"]), disabled=True)
+
+        session_id = str(selected_session["session_id"])
+        session_code = str(selected_session["session_code"])
+        session_date = selected_session["session_date"]
+        venue = str(selected_session["venue"])
+    else:
+        st.warning("Tidak ada session open. Generate session dulu dari Session Generator.")
+        st.stop()
+
+    auto_points = st.checkbox("Auto hitung poin: win 3, lose 1", value=True)
 
     st.markdown("**Player performance**")
     initial_rows = pd.DataFrame(
