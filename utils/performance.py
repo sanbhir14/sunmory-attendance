@@ -24,12 +24,23 @@ def performance_webhook_token() -> str:
 
 @st.cache_data(ttl=60, show_spinner=False)
 def load_open_sessions() -> tuple[pd.DataFrame, str]:
+    sessions, message = load_all_sessions()
+    if sessions.empty:
+        return sessions, "Belum ada session open." if message == "Sessions dari Google Sheets" else message
+    open_sessions = sessions[sessions["status"].astype(str).str.lower() == "open"].reset_index(drop=True)
+    if open_sessions.empty:
+        return open_sessions, "Belum ada session open."
+    return open_sessions, "Open sessions dari Google Sheets"
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def load_all_sessions() -> tuple[pd.DataFrame, str]:
     webhook_url = performance_webhook_url()
     if not webhook_url:
         return pd.DataFrame(), "SESSION_WEBHOOK_URL belum diset."
 
     try:
-        response = requests.get(webhook_url, params={"action": "open_sessions"}, timeout=20)
+        response = requests.get(webhook_url, params={"action": "all_sessions"}, timeout=20)
         response.raise_for_status()
         result = response.json()
     except Exception as exc:
@@ -40,12 +51,37 @@ def load_open_sessions() -> tuple[pd.DataFrame, str]:
 
     sessions = pd.DataFrame(result.get("data", []))
     if sessions.empty:
-        return sessions, "Belum ada session open."
+        return sessions, "Belum ada session."
 
     for column in ["session_id", "session_code", "venue", "session_date", "session_slot", "status"]:
         if column not in sessions.columns:
             sessions[column] = ""
-    return sessions, "Open sessions dari Google Sheets"
+    return sessions, "Sessions dari Google Sheets"
+
+
+def update_session_status(session_id: str, status: str) -> tuple[bool, str]:
+    webhook_url = performance_webhook_url()
+    if not webhook_url:
+        return False, "SESSION_WEBHOOK_URL belum diset di Streamlit secrets."
+
+    payload = {
+        "action": "update_session_status",
+        "token": performance_webhook_token(),
+        "session_id": session_id,
+        "status": status,
+    }
+
+    try:
+        response = requests.post(webhook_url, json=payload, timeout=20)
+        response.raise_for_status()
+        result = response.json()
+    except Exception as exc:
+        return False, f"Gagal connect ke Apps Script webhook: {exc}"
+
+    if not result.get("ok"):
+        return False, result.get("error", "Gagal update session status.")
+
+    return True, f"Session {session_id} berhasil diubah menjadi {status}."
 
 
 @st.cache_data(ttl=60, show_spinner=False)

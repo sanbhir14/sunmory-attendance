@@ -40,6 +40,13 @@ function doPost(e) {
       return jsonResponse_({ ok: true, inserted: records.length });
     }
 
+    if (payload.action === 'update_session_status') {
+      const sessionId = String(payload.session_id || '').trim();
+      const status = String(payload.status || '').trim().toLowerCase();
+      updateSessionStatus_(sessionId, status);
+      return jsonResponse_({ ok: true, session_id: sessionId, status });
+    }
+
     return jsonResponse_({ ok: false, error: 'Unsupported action' }, 400);
   } catch (error) {
     return jsonResponse_({ ok: false, error: String(error.message || error) }, 500);
@@ -54,6 +61,9 @@ function doGet(e) {
     }
     if (action === 'open_sessions') {
       return jsonResponse_({ ok: true, data: getOpenSessions_() });
+    }
+    if (action === 'all_sessions') {
+      return jsonResponse_({ ok: true, data: getAllSessions_() });
     }
     return jsonResponse_({ ok: false, error: 'Unsupported action' }, 400);
   } catch (error) {
@@ -110,6 +120,10 @@ function appendSession_(record) {
 }
 
 function getOpenSessions_() {
+  return getAllSessions_().filter((record) => String(record.status || '').toLowerCase() === 'open');
+}
+
+function getAllSessions_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.sessionsSheetName);
   if (!sheet || sheet.getLastRow() < 2) return [];
@@ -125,8 +139,30 @@ function getOpenSessions_() {
       });
       return record;
     })
-    .filter((record) => String(record.status || '').toLowerCase() === 'open')
     .sort((a, b) => String(b.session_date || '').localeCompare(String(a.session_date || '')));
+}
+
+function updateSessionStatus_(sessionId, status) {
+  if (!sessionId) throw new Error('session_id wajib diisi.');
+  if (!['open', 'closed'].includes(status)) throw new Error('Status harus open atau closed.');
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(CONFIG.sessionsSheetName);
+  if (!sheet || sheet.getLastRow() < 2) throw new Error('Tab sessions belum ada atau masih kosong.');
+
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0].map((header) => String(header || '').trim());
+  const sessionIdIndex = headers.indexOf('session_id');
+  const statusIndex = headers.indexOf('status');
+  if (sessionIdIndex < 0 || statusIndex < 0) throw new Error('Kolom session_id/status tidak ditemukan.');
+
+  for (let rowIndex = 1; rowIndex < values.length; rowIndex += 1) {
+    if (String(values[rowIndex][sessionIdIndex] || '').trim() === sessionId) {
+      sheet.getRange(rowIndex + 1, statusIndex + 1).setValue(status);
+      return;
+    }
+  }
+  throw new Error(`Session ${sessionId} tidak ditemukan.`);
 }
 
 function appendPerformanceRecords_(records) {

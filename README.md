@@ -13,6 +13,7 @@ Aplikasi web Streamlit untuk tracking attendance, stamp loyalty, reward, leaderb
 - Session generator untuk membuat `session_id` dan `session_code`
 - Optional auto-write session dari Streamlit ke tab `sessions` via Apps Script Web App
 - Performance input admin dan public Performance Leaderboard
+- Session Manager untuk ubah status session open/closed
 - Admin authentication untuk Home, Session Generator, Player Dashboard, dan Admin Insights
 - Player dashboard dengan search nama atau nomor HP
 - Reward milestone:
@@ -37,6 +38,7 @@ Aplikasi web Streamlit untuk tracking attendance, stamp loyalty, reward, leaderb
 |   |-- performance_input.py
 |   |-- performance_leaderboard.py
 |   |-- player_dashboard.py
+|   |-- session_manager.py
 |   `-- session_generator.py
 |-- utils/
 |   |-- __init__.py
