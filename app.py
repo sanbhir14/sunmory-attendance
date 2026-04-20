@@ -22,23 +22,23 @@ with st.sidebar:
         st.rerun()
 
 public_pages = [
-    st.Page("pages/leaderboard.py", title="Leaderboard"),
+    st.Page("views/leaderboard.py", title="Leaderboard"),
 ]
 
 if is_admin_authenticated():
     pages = {
         "Admin": [
-            st.Page("pages/home.py", title="Home"),
-            st.Page("pages/session_generator.py", title="Session Generator"),
-            st.Page("pages/player_dashboard.py", title="Player Dashboard"),
-            st.Page("pages/admin_insights.py", title="Admin Insights"),
+            st.Page("views/home.py", title="Home"),
+            st.Page("views/session_generator.py", title="Session Generator"),
+            st.Page("views/player_dashboard.py", title="Player Dashboard"),
+            st.Page("views/admin_insights.py", title="Admin Insights"),
         ],
         "Player": public_pages,
     }
 else:
     pages = {
         "Player": public_pages,
-        "Admin": [st.Page("pages/admin_login.py", title="Admin Login")],
+        "Admin": [st.Page("views/admin_login.py", title="Admin Login")],
     }
 
 navigation = st.navigation(pages)

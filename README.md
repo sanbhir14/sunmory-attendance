@@ -29,7 +29,7 @@ Aplikasi web Streamlit untuk tracking attendance, stamp loyalty, reward, leaderb
 |-- app.py
 |-- google_apps_script/
 |   `-- Code.gs
-|-- pages/
+|-- views/
 |   |-- admin_insights.py
 |   |-- home.py
 |   |-- leaderboard.py
