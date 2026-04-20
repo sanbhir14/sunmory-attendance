@@ -4,6 +4,7 @@ import plotly.express as px
 import streamlit as st
 
 from utils.app_data import load_app_data
+from utils.auth import require_admin
 from utils.data_processing import (
     attendance_trend,
     build_leaderboard,
@@ -12,6 +13,8 @@ from utils.data_processing import (
 )
 from utils.ui import dataframe_dates, format_date, show_empty_state
 
+
+require_admin()
 
 attendance_df, player_summary, source_message = load_app_data()
 metrics = dashboard_metrics(attendance_df, player_summary)

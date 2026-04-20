@@ -5,8 +5,11 @@ from datetime import date
 import requests
 import streamlit as st
 
+from utils.auth import require_admin
 from utils.session_tools import build_session_record, generate_session_code, session_record_to_csv
 
+
+require_admin()
 
 def secret_value(key: str, default: str = "") -> str:
     try:

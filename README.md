@@ -12,6 +12,7 @@ Aplikasi web Streamlit untuk tracking attendance, stamp loyalty, reward, leaderb
 - KPI komunitas, leaderboard, recent activity, chart trend attendance
 - Session generator untuk membuat `session_id` dan `session_code`
 - Optional auto-write session dari Streamlit ke tab `sessions` via Apps Script Web App
+- Admin authentication untuk Home, Session Generator, dan Admin Insights
 - Player dashboard dengan search nama atau nomor HP
 - Reward milestone:
   - 3 stamp: free drink/snack
@@ -195,6 +196,11 @@ copy .streamlit\secrets.toml.example .streamlit\secrets.toml
 ```
 
 Isi `.streamlit/secrets.toml` dengan `GOOGLE_SHEET_ID` + `GOOGLE_SHEET_GID`, atau langsung `GOOGLE_SHEET_CSV_URL`.
+Tambahkan password admin:
+
+```toml
+ADMIN_PASSWORD = "password-admin-lo"
+```
 
 Run app:
 
@@ -222,6 +228,12 @@ Atau:
 
 ```toml
 GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/xxx/pub?gid=0&single=true&output=csv"
+```
+
+Tambahkan juga:
+
+```toml
+ADMIN_PASSWORD = "password-admin-lo"
 ```
 
 7. Deploy.
