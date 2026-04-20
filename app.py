@@ -22,7 +22,6 @@ with st.sidebar:
         st.rerun()
 
 public_pages = [
-    st.Page("pages/player_dashboard.py", title="Player Dashboard"),
     st.Page("pages/leaderboard.py", title="Leaderboard"),
 ]
 
@@ -31,6 +30,7 @@ if is_admin_authenticated():
         "Admin": [
             st.Page("pages/home.py", title="Home"),
             st.Page("pages/session_generator.py", title="Session Generator"),
+            st.Page("pages/player_dashboard.py", title="Player Dashboard"),
             st.Page("pages/admin_insights.py", title="Admin Insights"),
         ],
         "Player": public_pages,

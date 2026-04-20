@@ -4,8 +4,11 @@ import pandas as pd
 import streamlit as st
 
 from utils.app_data import load_app_data
+from utils.auth import require_admin
 from utils.data_processing import find_player
 from utils.ui import dataframe_dates, format_date
+
+require_admin()
 
 attendance_df, player_summary, _ = load_app_data()
 
