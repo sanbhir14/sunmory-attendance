@@ -51,19 +51,44 @@ def apply_theme() -> None:
         }
         [data-testid="stSidebar"] {
             border-right: 1px solid var(--sunmory-line);
+            background: #ffffff;
         }
         [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
         [data-testid="stSidebar"] span,
-        [data-testid="stSidebar"] label {
-            color: var(--sunmory-ink);
+        [data-testid="stSidebar"] label,
+        [data-testid="stSidebar"] div {
+            color: #13201e;
+        }
+        [data-testid="stSidebarNav"] {
+            color: #13201e;
+        }
+        [data-testid="stSidebarNav"] ul {
+            padding-left: 0;
         }
         [data-testid="stSidebarNav"] a {
             border-radius: 8px;
             margin: 2px 0;
+            color: #13201e;
+            font-weight: 700;
+            opacity: 1;
+        }
+        [data-testid="stSidebarNav"] a span,
+        [data-testid="stSidebarNav"] a p,
+        [data-testid="stSidebarNav"] div,
+        [data-testid="stSidebarNav"] li,
+        [data-testid="stSidebarNav"] [data-testid="stMarkdownContainer"] p {
+            color: #13201e;
+            opacity: 1;
+        }
+        [data-testid="stSidebarNav"] [role="heading"],
+        [data-testid="stSidebarNav"] [data-testid="stNavSectionHeader"] {
+            color: #4d5a56;
+            font-weight: 800;
+            opacity: 1;
         }
         [data-testid="stSidebarNav"] a[aria-current="page"] {
             background: rgba(245, 158, 11, 0.16);
-            color: var(--sunmory-ink);
+            color: #13201e;
             font-weight: 700;
         }
         .main .block-container {
