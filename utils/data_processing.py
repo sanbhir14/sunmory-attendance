@@ -310,7 +310,9 @@ def find_player(summary: pd.DataFrame, query: str) -> pd.DataFrame:
     if not query or summary.empty:
         return pd.DataFrame()
     phone_query = normalize_phone(query)
-    return summary[
-        summary["player_name"].str.lower().str.contains(query, na=False)
-        | summary["phone"].str.contains(phone_query, na=False)
-    ]
+    name_pattern = rf"(?:^|\s){re.escape(query)}"
+    name_matches = summary["player_name"].str.lower().str.contains(name_pattern, na=False, regex=True)
+    if not phone_query:
+        return summary[name_matches]
+    phone_matches = summary["phone"].str.contains(phone_query, na=False)
+    return summary[name_matches | phone_matches]

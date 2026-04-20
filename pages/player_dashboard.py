@@ -12,7 +12,7 @@ attendance_df, player_summary, _ = load_app_data()
 st.title("Player Dashboard")
 st.caption("Cari player dari nama atau nomor HP untuk cek stamp, reward, dan history session.")
 
-query = st.text_input("Nama atau nomor HP", placeholder="Contoh: Alya atau 0812...")
+query = st.text_input("Nama atau nomor HP", placeholder="Contoh: Sandi atau 0812...")
 matches = find_player(player_summary, query)
 
 if not query:
@@ -20,10 +20,10 @@ if not query:
     st.stop()
 
 if matches.empty:
-    st.warning("Player belum ditemukan. Coba cek ejaan nama atau nomor HP yang dipakai saat isi form.")
+    st.warning(f"Player `{query}` belum ditemukan. Coba cek ejaan nama atau nomor HP yang dipakai saat isi form.")
     st.stop()
 
-selected_name = st.selectbox("Pilih player", matches["player_name"].tolist())
+selected_name = st.selectbox("Pilih player", matches["player_name"].tolist(), key=f"player_select_{query.lower()}")
 player = matches[matches["player_name"] == selected_name].iloc[0]
 history = attendance_df[attendance_df["player_id"] == player["player_id"]].sort_values("session_date", ascending=False)
 
