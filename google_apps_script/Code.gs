@@ -1,8 +1,10 @@
 const CONFIG = {
   rawSheetName: 'Form_Responses',
+  sessionsSheetName: 'sessions',
   playersSheetName: 'players_db',
   referralSheetName: 'referral_log',
   rewardSheetName: 'reward_status',
+  webhookToken: '',
   rewards: [
     { stamps: 3, reward: 'Free drink/snack' },
     { stamps: 5, reward: 'Diskon session' },
@@ -16,6 +18,25 @@ function onOpen() {
     .createMenu('Sunmory')
     .addItem('Process Attendance', 'processAttendance')
     .addToUi();
+}
+
+function doPost(e) {
+  try {
+    const payload = JSON.parse(e.postData.contents || '{}');
+    if (CONFIG.webhookToken && payload.token !== CONFIG.webhookToken) {
+      return jsonResponse_({ ok: false, error: 'Unauthorized token' }, 401);
+    }
+
+    if (payload.action !== 'append_session') {
+      return jsonResponse_({ ok: false, error: 'Unsupported action' }, 400);
+    }
+
+    const record = payload.session || {};
+    appendSession_(record);
+    return jsonResponse_({ ok: true, session_id: record.session_id, session_code: record.session_code });
+  } catch (error) {
+    return jsonResponse_({ ok: false, error: String(error.message || error) }, 500);
+  }
 }
 
 function processAttendance() {
@@ -43,6 +64,27 @@ function processAttendance() {
   writeSheet_(ss, CONFIG.playersSheetName, getPlayersHeader_(), players);
   writeSheet_(ss, CONFIG.referralSheetName, getReferralHeader_(), referrals);
   writeSheet_(ss, CONFIG.rewardSheetName, getRewardHeader_(), rewards);
+}
+
+function appendSession_(record) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const header = getSessionsHeader_();
+  let sheet = ss.getSheetByName(CONFIG.sessionsSheetName);
+  if (!sheet) {
+    sheet = ss.insertSheet(CONFIG.sessionsSheetName);
+    sheet.getRange(1, 1, 1, header.length).setValues([header]);
+    sheet.setFrozenRows(1);
+  }
+
+  const existingValues = sheet.getDataRange().getValues();
+  const existingSessionIds = existingValues.slice(1).map((row) => String(row[0] || '').trim());
+  if (existingSessionIds.includes(String(record.session_id || '').trim())) {
+    throw new Error(`Session ${record.session_id} sudah ada di tab sessions.`);
+  }
+
+  const row = header.map((key) => record[key] || '');
+  sheet.appendRow(row);
+  sheet.autoResizeColumns(1, header.length);
 }
 
 function rowToRecord_(headers, row) {
@@ -189,6 +231,10 @@ function getRewardHeader_() {
   return ['player_key', 'name', 'total_stamp', 'eligible_rewards', 'next_reward', 'stamps_remaining', 'status'];
 }
 
+function getSessionsHeader_() {
+  return ['session_id', 'session_code', 'venue', 'session_date', 'session_slot', 'status', 'created_at'];
+}
+
 function writeSheet_(ss, sheetName, header, rows) {
   let sheet = ss.getSheetByName(sheetName);
   if (!sheet) sheet = ss.insertSheet(sheetName);
@@ -207,6 +253,10 @@ function getSheetByPossibleNames_(ss, names) {
     if (sheet) return sheet;
   }
   return null;
+}
+
+function jsonResponse_(data) {
+  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
 }
 
 function normalizeHeader_(value) {

@@ -11,6 +11,7 @@ Aplikasi web Streamlit untuk tracking attendance, stamp loyalty, reward, leaderb
 - Unique player ID dari nama dan nomor HP
 - KPI komunitas, leaderboard, recent activity, chart trend attendance
 - Session generator untuk membuat `session_id` dan `session_code`
+- Optional auto-write session dari Streamlit ke tab `sessions` via Apps Script Web App
 - Player dashboard dengan search nama atau nomor HP
 - Reward milestone:
   - 3 stamp: free drink/snack
@@ -62,6 +63,32 @@ Format tab `sessions` yang disarankan:
 | session_id | session_code | venue | session_date | session_slot | status | created_at |
 |---|---|---|---|---|---|---|
 | SPC-20260420-NEO-PADEL-JATIWARINGIN-MORNING | A7K2Q9 | Neo Padel Jatiwaringin | 2026-04-20 | Morning | open | 2026-04-20 07:00:00 |
+
+## Auto-write Session Generator ke Google Sheets
+
+Default-nya Streamlit hanya membaca Google Sheets. Agar Session Generator bisa langsung menulis ke tab `sessions`, deploy Apps Script sebagai Web App:
+
+1. Buka Google Sheets.
+2. Klik `Extensions > Apps Script`.
+3. Paste/update isi `google_apps_script/Code.gs`.
+4. Klik `Deploy > New deployment`.
+5. Pilih type `Web app`.
+6. Set `Execute as` ke `Me`.
+7. Set `Who has access` ke `Anyone`.
+8. Klik `Deploy`, approve permission, lalu copy URL yang berakhiran `/exec`.
+9. Masukkan URL itu ke Streamlit secrets:
+
+```toml
+SESSION_WEBHOOK_URL = "https://script.google.com/macros/s/xxx/exec"
+```
+
+Kalau ingin token sederhana, isi `webhookToken` di `Code.gs`, lalu tambahkan secrets:
+
+```toml
+SESSION_WEBHOOK_TOKEN = "token-yang-sama"
+```
+
+Setelah aktif, page `Session Generator` akan menampilkan tombol `Write to Google Sheets`.
 
 Field Google Form yang disarankan:
 
