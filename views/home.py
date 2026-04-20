@@ -45,8 +45,9 @@ left, right = st.columns([1.25, 1])
 with left:
     st.subheader("Top 10 Leaderboard")
     leaderboard = build_leaderboard(attendance_df).head(10)
+    leaderboard_display = leaderboard.drop(columns=["phone"], errors="ignore")
     st.dataframe(
-        dataframe_dates(leaderboard, ["last_played"]),
+        dataframe_dates(leaderboard_display, ["last_played"]),
         hide_index=True,
         use_container_width=True,
         column_config={

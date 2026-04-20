@@ -23,6 +23,8 @@ if leaderboard.empty:
     st.info("Belum ada data untuk filter ini.")
     st.stop()
 
+public_leaderboard = leaderboard.drop(columns=["phone"], errors="ignore")
+
 st.subheader("Top 3")
 top_cols = st.columns(3)
 for idx, player in enumerate(leaderboard.head(3).itertuples()):
@@ -31,13 +33,12 @@ for idx, player in enumerate(leaderboard.head(3).itertuples()):
 
 st.subheader("Ranking lengkap")
 st.dataframe(
-    dataframe_dates(leaderboard, ["last_played"]),
+    dataframe_dates(public_leaderboard, ["last_played"]),
     hide_index=True,
     use_container_width=True,
     column_config={
         "rank": "Rank",
         "player_name": "Nama",
-        "phone": "HP",
         "total_session": "Session",
         "total_stamp": "Stamp",
         "last_played": "Last played",
