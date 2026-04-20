@@ -23,7 +23,7 @@ with st.sidebar:
 
 public_pages = [
     st.Page("views/leaderboard.py", title="Attendance Leaderboard"),
-    st.Page("views/performance_leaderboard.py", title="Match Recap"),
+    st.Page("views/performance_leaderboard.py", title="Match Leaderboard"),
 ]
 
 if is_admin_authenticated():

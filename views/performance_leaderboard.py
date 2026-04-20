@@ -90,8 +90,8 @@ def aggregate_ranking(records: pd.DataFrame) -> pd.DataFrame:
     return grouped
 
 
-st.title("Match Recap")
-st.caption("Ringkasan match komunitas: poin, match, win, dan aktivitas session.")
+st.title("Match Leaderboard")
+st.caption("Ranking match komunitas: poin, session, average, dan win rate.")
 
 _, records, message = load_performance_data()
 
