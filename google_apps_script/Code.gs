@@ -1,6 +1,7 @@
 const CONFIG = {
   rawSheetName: 'Form_Responses',
   sessionsSheetName: 'sessions',
+  performanceSheetName: 'performance_log',
   playersSheetName: 'players_db',
   referralSheetName: 'referral_log',
   rewardSheetName: 'reward_status',
@@ -27,13 +28,31 @@ function doPost(e) {
       return jsonResponse_({ ok: false, error: 'Unauthorized token' }, 401);
     }
 
-    if (payload.action !== 'append_session') {
-      return jsonResponse_({ ok: false, error: 'Unsupported action' }, 400);
+    if (payload.action === 'append_session') {
+      const record = payload.session || {};
+      appendSession_(record);
+      return jsonResponse_({ ok: true, session_id: record.session_id, session_code: record.session_code });
     }
 
-    const record = payload.session || {};
-    appendSession_(record);
-    return jsonResponse_({ ok: true, session_id: record.session_id, session_code: record.session_code });
+    if (payload.action === 'append_performance') {
+      const records = payload.records || [];
+      appendPerformanceRecords_(records);
+      return jsonResponse_({ ok: true, inserted: records.length });
+    }
+
+    return jsonResponse_({ ok: false, error: 'Unsupported action' }, 400);
+  } catch (error) {
+    return jsonResponse_({ ok: false, error: String(error.message || error) }, 500);
+  }
+}
+
+function doGet(e) {
+  try {
+    const action = e.parameter.action || '';
+    if (action === 'performance_summary') {
+      return jsonResponse_({ ok: true, data: getPerformanceSummary_() });
+    }
+    return jsonResponse_({ ok: false, error: 'Unsupported action' }, 400);
   } catch (error) {
     return jsonResponse_({ ok: false, error: String(error.message || error) }, 500);
   }
@@ -85,6 +104,112 @@ function appendSession_(record) {
   const row = header.map((key) => record[key] || '');
   sheet.appendRow(row);
   sheet.autoResizeColumns(1, header.length);
+}
+
+function appendPerformanceRecords_(records) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const header = getPerformanceHeader_();
+  let sheet = ss.getSheetByName(CONFIG.performanceSheetName);
+  if (!sheet) {
+    sheet = ss.insertSheet(CONFIG.performanceSheetName);
+    sheet.getRange(1, 1, 1, header.length).setValues([header]);
+    sheet.setFrozenRows(1);
+  }
+
+  const rows = records
+    .filter((record) => String(record.player_name || '').trim())
+    .map((record) => {
+      const playerName = normalizeName_(record.player_name);
+      const enriched = {
+        created_at: record.created_at || new Date(),
+        session_id: String(record.session_id || '').trim(),
+        session_code: String(record.session_code || '').trim().toUpperCase(),
+        session_date: record.session_date || '',
+        venue: String(record.venue || '').trim(),
+        player_name: playerName,
+        player_key: makePlayerKey_(playerName),
+        matches_played: Number(record.matches_played || 0),
+        wins: Number(record.wins || 0),
+        losses: Number(record.losses || 0),
+        points: Number(record.points || 0),
+        notes: String(record.notes || '').trim(),
+      };
+      return header.map((key) => enriched[key] || '');
+    });
+
+  if (!rows.length) {
+    throw new Error('Tidak ada performance record valid untuk ditulis.');
+  }
+
+  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, header.length).setValues(rows);
+  sheet.autoResizeColumns(1, header.length);
+}
+
+function getPerformanceSummary_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(CONFIG.performanceSheetName);
+  if (!sheet || sheet.getLastRow() < 2) {
+    return { summary: [], records: [] };
+  }
+
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0].map((header) => String(header || '').trim());
+  const records = values.slice(1).map((row) => {
+    const record = {};
+    headers.forEach((header, index) => {
+      record[header] = row[index];
+    });
+    return record;
+  });
+
+  const byPlayer = {};
+  records.forEach((record) => {
+    const playerKey = String(record.player_key || makePlayerKey_(record.player_name)).trim();
+    if (!playerKey) return;
+    if (!byPlayer[playerKey]) {
+      byPlayer[playerKey] = {
+        player_name: record.player_name,
+        total_points: 0,
+        matches_played: 0,
+        wins: 0,
+        losses: 0,
+        sessions_played: {},
+        last_session_date: record.session_date || '',
+      };
+    }
+    const player = byPlayer[playerKey];
+    player.player_name = record.player_name || player.player_name;
+    player.total_points += Number(record.points || 0);
+    player.matches_played += Number(record.matches_played || 0);
+    player.wins += Number(record.wins || 0);
+    player.losses += Number(record.losses || 0);
+    if (record.session_id) player.sessions_played[record.session_id] = true;
+    if (record.session_date && String(record.session_date) > String(player.last_session_date || '')) {
+      player.last_session_date = record.session_date;
+    }
+  });
+
+  const summary = Object.values(byPlayer)
+    .map((player) => {
+      const totalMatches = Number(player.matches_played || 0);
+      return {
+        player_name: player.player_name,
+        total_points: player.total_points,
+        matches_played: totalMatches,
+        wins: player.wins,
+        losses: player.losses,
+        win_rate: totalMatches ? player.wins / totalMatches : 0,
+        sessions_played: Object.keys(player.sessions_played).length,
+        last_session_date: player.last_session_date,
+      };
+    })
+    .sort((a, b) => b.total_points - a.total_points || b.wins - a.wins || a.player_name.localeCompare(b.player_name));
+
+  summary.forEach((player, index) => {
+    player.rank = index + 1;
+  });
+
+  return { summary, records };
 }
 
 function rowToRecord_(headers, row) {
@@ -233,6 +358,23 @@ function getRewardHeader_() {
 
 function getSessionsHeader_() {
   return ['session_id', 'session_code', 'venue', 'session_date', 'session_slot', 'status', 'created_at'];
+}
+
+function getPerformanceHeader_() {
+  return [
+    'created_at',
+    'session_id',
+    'session_code',
+    'session_date',
+    'venue',
+    'player_name',
+    'player_key',
+    'matches_played',
+    'wins',
+    'losses',
+    'points',
+    'notes',
+  ];
 }
 
 function writeSheet_(ss, sheetName, header, rows) {

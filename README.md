@@ -12,6 +12,7 @@ Aplikasi web Streamlit untuk tracking attendance, stamp loyalty, reward, leaderb
 - KPI komunitas, leaderboard, recent activity, chart trend attendance
 - Session generator untuk membuat `session_id` dan `session_code`
 - Optional auto-write session dari Streamlit ke tab `sessions` via Apps Script Web App
+- Performance input admin dan public Performance Leaderboard
 - Admin authentication untuk Home, Session Generator, Player Dashboard, dan Admin Insights
 - Player dashboard dengan search nama atau nomor HP
 - Reward milestone:
@@ -33,6 +34,8 @@ Aplikasi web Streamlit untuk tracking attendance, stamp loyalty, reward, leaderb
 |   |-- admin_insights.py
 |   |-- home.py
 |   |-- leaderboard.py
+|   |-- performance_input.py
+|   |-- performance_leaderboard.py
 |   |-- player_dashboard.py
 |   `-- session_generator.py
 |-- utils/
@@ -53,6 +56,7 @@ Saran struktur dalam satu file Google Sheets:
 
 - `Form_Responses`: raw data dari Google Form, jangan diedit manual
 - `sessions`: daftar session valid dari Session Generator
+- `performance_log`: input poin, match, win, lose per session
 - `players_db`: database player hasil olahan, bisa dibuat nanti
 - `referral_log`: log referral valid/invalid, bisa dibuat nanti
 - `reward_log`: log reward yang sudah diclaim, bisa dibuat nanti

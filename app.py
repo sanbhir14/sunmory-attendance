@@ -23,6 +23,7 @@ with st.sidebar:
 
 public_pages = [
     st.Page("views/leaderboard.py", title="Leaderboard"),
+    st.Page("views/performance_leaderboard.py", title="Performance Leaderboard"),
 ]
 
 if is_admin_authenticated():
@@ -30,6 +31,7 @@ if is_admin_authenticated():
         "Admin": [
             st.Page("views/home.py", title="Home"),
             st.Page("views/session_generator.py", title="Session Generator"),
+            st.Page("views/performance_input.py", title="Performance Input"),
             st.Page("views/player_dashboard.py", title="Player Dashboard"),
             st.Page("views/admin_insights.py", title="Admin Insights"),
         ],
