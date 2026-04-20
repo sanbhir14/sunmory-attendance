@@ -51,12 +51,9 @@ def apply_theme() -> None:
         }
         [data-testid="stSidebar"] {
             border-right: 1px solid var(--sunmory-line);
-            background: #ffffff;
+            background: #fbf7ec;
         }
-        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
-        [data-testid="stSidebar"] span,
-        [data-testid="stSidebar"] label,
-        [data-testid="stSidebar"] div {
+        [data-testid="stSidebar"] * {
             color: #13201e;
         }
         [data-testid="stSidebarNav"] {
@@ -67,7 +64,8 @@ def apply_theme() -> None:
         }
         [data-testid="stSidebarNav"] a {
             border-radius: 8px;
-            margin: 2px 0;
+            margin: 4px 0;
+            padding: 8px 10px;
             color: #13201e;
             font-weight: 700;
             opacity: 1;
@@ -82,12 +80,12 @@ def apply_theme() -> None:
         }
         [data-testid="stSidebarNav"] [role="heading"],
         [data-testid="stSidebarNav"] [data-testid="stNavSectionHeader"] {
-            color: #4d5a56;
+            color: #0f4c4c;
             font-weight: 800;
             opacity: 1;
         }
         [data-testid="stSidebarNav"] a[aria-current="page"] {
-            background: rgba(245, 158, 11, 0.16);
+            background: #fff1c7;
             color: #13201e;
             font-weight: 700;
         }
@@ -111,21 +109,21 @@ def apply_theme() -> None:
             letter-spacing: 0;
         }
         .sunmory-brand {
-            border: 1px solid var(--sunmory-line);
+            border: 1px solid #eadfca;
             border-radius: 8px;
             padding: 12px;
-            background: var(--sunmory-card);
-            box-shadow: 0 8px 22px var(--sunmory-shadow);
+            background: #ffffff;
+            box-shadow: 0 8px 18px rgba(36, 27, 12, 0.08);
             margin-bottom: 12px;
         }
         .sunmory-brand-title {
-            color: var(--sunmory-ink);
+            color: #13201e;
             font-weight: 800;
             letter-spacing: 0;
             margin: 0;
         }
         .sunmory-brand-subtitle {
-            color: var(--sunmory-muted);
+            color: #5d6b65;
             font-size: 0.82rem;
             margin-top: 2px;
         }
@@ -223,6 +221,11 @@ def apply_theme() -> None:
         .stButton > button:hover,
         [data-testid="stDownloadButton"] button:hover {
             border-color: var(--sunmory-amber);
+            color: #ffffff;
+        }
+        [data-testid="stSidebar"] .stButton > button,
+        [data-testid="stSidebar"] .stButton > button p,
+        [data-testid="stSidebar"] .stButton > button span {
             color: #ffffff;
         }
         div[data-baseweb="input"] > div,
