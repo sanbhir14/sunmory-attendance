@@ -145,7 +145,6 @@ def prepare_performance_records(
     session_date,
     venue: str,
     rows: pd.DataFrame,
-    auto_points: bool,
 ) -> list[dict]:
     records: list[dict] = []
     for row in rows.fillna("").to_dict("records"):
@@ -156,7 +155,7 @@ def prepare_performance_records(
         matches_played = int(row.get("matches_played") or 0)
         wins = int(row.get("wins") or 0)
         losses = int(row.get("losses") or 0)
-        points = wins * 3 + losses if auto_points else int(row.get("points") or 0)
+        points = int(row.get("points") or 0)
 
         records.append(
             {

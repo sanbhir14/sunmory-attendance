@@ -46,7 +46,7 @@ with st.form("performance_session_form"):
         st.warning("Tidak ada session open. Generate session dulu dari Session Generator.")
         st.stop()
 
-    auto_points = st.checkbox("Auto hitung poin: win 3, lose 1", value=True)
+    st.info("Poin diisi manual sesuai hasil skor/match. Win/Lose tetap dicatat untuk recap.")
 
     st.markdown("**Player performance**")
     initial_rows = pd.DataFrame(
@@ -66,7 +66,7 @@ with st.form("performance_session_form"):
             "matches_played": st.column_config.NumberColumn("Match", min_value=0, step=1),
             "wins": st.column_config.NumberColumn("Win", min_value=0, step=1),
             "losses": st.column_config.NumberColumn("Lose", min_value=0, step=1),
-            "points": st.column_config.NumberColumn("Poin", min_value=0, step=1, disabled=auto_points),
+            "points": st.column_config.NumberColumn("Poin", min_value=0, step=1),
             "notes": st.column_config.TextColumn("Notes"),
         },
     )
@@ -84,7 +84,6 @@ if submitted:
         session_date=session_date,
         venue=venue,
         rows=rows,
-        auto_points=auto_points,
     )
 
     if not records:

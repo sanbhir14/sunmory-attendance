@@ -58,7 +58,7 @@ Saran struktur dalam satu file Google Sheets:
 
 - `Form_Responses`: raw data dari Google Form, jangan diedit manual
 - `sessions`: daftar session valid dari Session Generator
-- `performance_log`: input poin, match, win, lose per session
+- `performance_log`: input poin manual, match, win, lose per session
 - `players_db`: database player hasil olahan, bisa dibuat nanti
 - `referral_log`: log referral valid/invalid, bisa dibuat nanti
 - `reward_log`: log reward yang sudah diclaim, bisa dibuat nanti
