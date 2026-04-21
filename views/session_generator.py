@@ -54,20 +54,22 @@ else:
         "atau isi `SESSION_WEBHOOK_URL` di secrets."
     )
 
+venue_choice = st.selectbox(
+    "Venue",
+    [
+        "Neo Padel Jatiwaringin",
+        "Victoria Social Club Kemang",
+        "Custom venue",
+    ],
+)
+venue = venue_choice
+if venue_choice == "Custom venue":
+    venue = st.text_input("Nama venue", placeholder="Tulis nama venue baru")
+
 with st.form("session_generator_form"):
     col1, col2 = st.columns(2)
     with col1:
         session_date = st.date_input("Tanggal session", value=date.today())
-        venue = st.selectbox(
-            "Venue",
-            [
-                "Neo Padel Jatiwaringin",
-                "Victoria Social Club Kemang",
-                "Custom venue",
-            ],
-        )
-        if venue == "Custom venue":
-            venue = st.text_input("Nama venue", placeholder="Nama venue baru")
     with col2:
         session_slot = st.text_input("Slot / jam main", placeholder="Contoh: 07:00-09:00 atau Morning")
         status = st.selectbox("Status", ["open", "closed"], index=0)

@@ -7,6 +7,12 @@ import requests
 import streamlit as st
 
 
+VENUE_PRICE_DEFAULTS = {
+    "Victoria Social Club Kemang": {"expense_amount": 610_000, "player_price": 120_000},
+    "Neo Padel Jatiwaringin": {"expense_amount": 410_000, "player_price": 80_000},
+}
+
+
 def secret_value(key: str, default: str = "") -> str:
     try:
         return str(st.secrets.get(key, default))
@@ -68,6 +74,11 @@ def load_all_sessions() -> tuple[pd.DataFrame, str]:
             sessions[column] = ""
     for column in ["expense_amount", "player_price"]:
         sessions[column] = pd.to_numeric(sessions[column], errors="coerce").fillna(0)
+
+    for venue, defaults in VENUE_PRICE_DEFAULTS.items():
+        venue_mask = sessions["venue"].astype(str).eq(venue)
+        sessions.loc[venue_mask & sessions["player_price"].le(0), "player_price"] = defaults["player_price"]
+        sessions.loc[venue_mask & sessions["expense_amount"].le(defaults["player_price"]), "expense_amount"] = defaults["expense_amount"]
     return sessions, "Sessions dari Google Sheets"
 
 

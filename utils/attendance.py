@@ -125,3 +125,26 @@ def rebuild_players_db() -> tuple[bool, str]:
         return False, result.get("error", "Gagal rebuild players_db.")
 
     return True, "players_db berhasil disinkron ulang dari attendance_log."
+
+
+def rebuild_finance() -> tuple[bool, str]:
+    webhook_url = performance_webhook_url()
+    if not webhook_url:
+        return False, "SESSION_WEBHOOK_URL belum diset di Streamlit secrets."
+
+    payload = {
+        "action": "rebuild_finance",
+        "token": performance_webhook_token(),
+    }
+
+    try:
+        response = requests.post(webhook_url, json=payload, timeout=30)
+        response.raise_for_status()
+        result = response.json()
+    except Exception as exc:
+        return False, f"Gagal sync finance: {exc}"
+
+    if not result.get("ok"):
+        return False, result.get("error", "Gagal sync finance.")
+
+    return True, "finance_income dan finance_expenses berhasil disinkron."

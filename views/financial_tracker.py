@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from utils.attendance import load_attendance_records
+from utils.attendance import load_attendance_records, rebuild_finance
 from utils.auth import require_admin
 from utils.performance import load_all_sessions
 
@@ -28,6 +28,15 @@ if sessions.empty:
 if "session_id" not in sessions.columns:
     st.warning("Data sessions belum punya kolom session_id. Generate session baru atau redeploy Apps Script terbaru.")
     st.stop()
+
+if st.button("Sync finance sheets", use_container_width=True):
+    ok, sync_message = rebuild_finance()
+    if ok:
+        st.success(sync_message)
+        st.cache_data.clear()
+        st.rerun()
+    else:
+        st.error(sync_message)
 
 for column in ["expense_amount", "player_price"]:
     if column not in sessions.columns:

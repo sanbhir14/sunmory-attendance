@@ -3,6 +3,8 @@ const CONFIG = {
   attendanceSheetName: 'attendance_log',
   sessionsSheetName: 'sessions',
   performanceSheetName: 'performance_log',
+  financeIncomeSheetName: 'finance_income',
+  financeExpenseSheetName: 'finance_expenses',
   playersSheetName: 'players_db',
   referralSheetName: 'referral_log',
   rewardSheetName: 'reward_status',
@@ -61,6 +63,11 @@ function doPost(e) {
 
     if (payload.action === 'rebuild_players_db') {
       rebuildPlayersDb_(SpreadsheetApp.getActiveSpreadsheet(), true);
+      return jsonResponse_({ ok: true });
+    }
+
+    if (payload.action === 'rebuild_finance') {
+      rebuildFinanceSheets_(SpreadsheetApp.getActiveSpreadsheet());
       return jsonResponse_({ ok: true });
     }
 
@@ -132,9 +139,21 @@ function appendSession_(record) {
     throw new Error(`Session ${record.session_id} sudah ada di tab sessions.`);
   }
 
-  const row = header.map((key) => record[key] || '');
-  sheet.appendRow(row);
-  sheet.autoResizeColumns(1, header.length);
+  const sessionRecord = {
+    session_id: String(record.session_id || '').trim(),
+    session_code: String(record.session_code || '').trim().toUpperCase(),
+    venue: String(record.venue || '').trim(),
+    session_date: record.session_date || '',
+    session_slot: String(record.session_slot || '').trim(),
+    status: String(record.status || 'open').trim().toLowerCase(),
+    expense_amount: Number(record.expense_amount || 0),
+    player_price: Number(record.player_price || 0),
+    paid_by: String(record.paid_by || '').trim(),
+    created_at: record.created_at || new Date(),
+  };
+
+  appendRecordByHeader_(sheet, sessionRecord);
+  appendExpenseRecord_(ss, sessionRecord);
 }
 
 function getOpenSessions_() {
@@ -143,7 +162,7 @@ function getOpenSessions_() {
 
 function getAllSessions_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(CONFIG.sessionsSheetName);
+  const sheet = ensureSheet_(ss, CONFIG.sessionsSheetName, getSessionsHeader_());
   if (!sheet || sheet.getLastRow() < 2) return [];
 
   const values = sheet.getDataRange().getValues();
@@ -254,7 +273,8 @@ function appendAttendance_(record) {
     notes: String(record.notes || '').trim(),
   };
 
-  sheet.appendRow(header.map((key) => attendanceRecord[key] || ''));
+  appendRecordByHeader_(sheet, attendanceRecord);
+  appendIncomeRecord_(ss, attendanceRecord);
   rebuildPlayersDb_(ss, true);
   return {
     attendance_id: attendanceRecord.attendance_id,
@@ -276,6 +296,83 @@ function getPlayersDbRecords_() {
   const sheet = ss.getSheetByName(CONFIG.playersSheetName);
   if (!sheet || sheet.getLastRow() < 2) return [];
   return recordsFromSheet_(sheet);
+}
+
+function appendExpenseRecord_(ss, sessionRecord) {
+  const header = getFinanceExpenseHeader_();
+  const sheet = ensureSheet_(ss, CONFIG.financeExpenseSheetName, header);
+  const existing = recordsFromSheet_(sheet).some((row) => String(row.session_id || '').trim() === sessionRecord.session_id);
+  if (existing) return;
+
+  appendRecordByHeader_(sheet, buildExpenseRecord_(sessionRecord));
+}
+
+function appendIncomeRecord_(ss, attendanceRecord) {
+  const header = getFinanceIncomeHeader_();
+  const sheet = ensureSheet_(ss, CONFIG.financeIncomeSheetName, header);
+  const existing = recordsFromSheet_(sheet).some((row) => String(row.attendance_id || '').trim() === attendanceRecord.attendance_id);
+  if (existing) return;
+
+  appendRecordByHeader_(sheet, buildIncomeRecord_(attendanceRecord));
+}
+
+function rebuildFinanceSheets_(ss) {
+  const expenseHeader = getFinanceExpenseHeader_();
+  const incomeHeader = getFinanceIncomeHeader_();
+  const sessionsSheet = ensureSheet_(ss, CONFIG.sessionsSheetName, getSessionsHeader_());
+  const attendanceSheet = ensureSheet_(ss, CONFIG.attendanceSheetName, getAttendanceHeader_());
+  const sessions = recordsFromSheet_(sessionsSheet);
+  const attendance = recordsFromSheet_(attendanceSheet);
+
+  const expenseRows = sessions
+    .filter((session) => String(session.session_id || '').trim())
+    .map((session) => {
+      const record = buildExpenseRecord_(session);
+      return expenseHeader.map((key) => record[key] || '');
+    });
+
+  const incomeRows = attendance
+    .filter((row) => String(row.attendance_id || '').trim())
+    .filter((row) => String(row.attendance_type || 'regular').trim() !== 'referral_bonus')
+    .map((row) => {
+      const record = buildIncomeRecord_(row);
+      return incomeHeader.map((key) => record[key] || '');
+    });
+
+  writeSheet_(ss, CONFIG.financeExpenseSheetName, expenseHeader, expenseRows);
+  writeSheet_(ss, CONFIG.financeIncomeSheetName, incomeHeader, incomeRows);
+}
+
+function buildExpenseRecord_(sessionRecord) {
+  return {
+    created_at: new Date(),
+    session_id: String(sessionRecord.session_id || '').trim(),
+    session_code: String(sessionRecord.session_code || '').trim().toUpperCase(),
+    session_date: sessionRecord.session_date || '',
+    venue: String(sessionRecord.venue || '').trim(),
+    expense_type: 'venue',
+    amount: Number(sessionRecord.expense_amount || 0),
+    paid_by: String(sessionRecord.paid_by || '').trim(),
+    notes: 'Auto expense dari Session Generator',
+  };
+}
+
+function buildIncomeRecord_(attendanceRecord) {
+  return {
+    created_at: attendanceRecord.created_at || new Date(),
+    attendance_id: String(attendanceRecord.attendance_id || '').trim(),
+    session_id: String(attendanceRecord.session_id || '').trim(),
+    session_code: String(attendanceRecord.session_code || '').trim().toUpperCase(),
+    session_date: attendanceRecord.session_date || '',
+    venue: String(attendanceRecord.venue || '').trim(),
+    username_reclub: String(attendanceRecord.username_reclub || '').trim(),
+    player_name: String(attendanceRecord.player_name || '').trim(),
+    base_price: Number(attendanceRecord.base_price || 0),
+    claimed_reward: String(attendanceRecord.claimed_reward || '').trim(),
+    discount_percent: Number(attendanceRecord.discount_percent || 0),
+    income_amount: Number(attendanceRecord.income_amount || 0),
+    notes: String(attendanceRecord.notes || '').trim(),
+  };
 }
 
 function rebuildPlayersDb_(ss, addMissingBonuses) {
@@ -802,6 +899,38 @@ function getPerformanceHeader_() {
   ];
 }
 
+function getFinanceExpenseHeader_() {
+  return [
+    'created_at',
+    'session_id',
+    'session_code',
+    'session_date',
+    'venue',
+    'expense_type',
+    'amount',
+    'paid_by',
+    'notes',
+  ];
+}
+
+function getFinanceIncomeHeader_() {
+  return [
+    'created_at',
+    'attendance_id',
+    'session_id',
+    'session_code',
+    'session_date',
+    'venue',
+    'username_reclub',
+    'player_name',
+    'base_price',
+    'claimed_reward',
+    'discount_percent',
+    'income_amount',
+    'notes',
+  ];
+}
+
 function writeSheet_(ss, sheetName, header, rows) {
   let sheet = ss.getSheetByName(sheetName);
   if (!sheet) sheet = ss.insertSheet(sheetName);
@@ -850,6 +979,13 @@ function recordsFromSheet_(sheet) {
     });
     return record;
   });
+}
+
+function appendRecordByHeader_(sheet, record) {
+  const headers = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0].map((header) => String(header || '').trim());
+  const row = headers.map((header) => Object.prototype.hasOwnProperty.call(record, header) ? record[header] : '');
+  sheet.appendRow(row);
+  sheet.autoResizeColumns(1, headers.length);
 }
 
 function findSessionById_(ss, sessionId) {
