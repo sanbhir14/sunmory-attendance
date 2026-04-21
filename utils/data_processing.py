@@ -18,8 +18,11 @@ REQUIRED_COLUMNS = [
 ]
 
 OPTIONAL_COLUMNS = [
+    "username_reclub",
     "session_slot",
     "referral_code",
+    "referral_code_used",
+    "attendance_type",
     "notes",
 ]
 
@@ -31,9 +34,14 @@ COLUMN_ALIASES = {
     "nomor_hp": "phone",
     "whatsapp": "phone",
     "wa": "phone",
+    "created_at": "timestamp",
+    "check_in": "timestamp",
+    "checkin": "timestamp",
     "date": "session_date",
     "tanggal": "session_date",
     "tanggal_main": "session_date",
+    "username": "username_reclub",
+    "reclub_username": "username_reclub",
     "session": "session_slot",
     "slot": "session_slot",
     "jam_main": "session_slot",
@@ -115,8 +123,16 @@ def normalize_referral_code(code: object) -> str:
     return cleaned
 
 
-def make_player_id(name: str, phone: str) -> str:
-    base = f"{normalize_name(name).lower()}::{normalize_phone(phone)}"
+def normalize_username(username: object) -> str:
+    return str(username or "").strip().lstrip("@").lower()
+
+
+def make_player_id(name: str, phone: str, username: str = "") -> str:
+    username = normalize_username(username)
+    if username:
+        base = f"reclub::{username}"
+    else:
+        base = f"{normalize_name(name).lower()}::{normalize_phone(phone)}"
     return hashlib.sha1(base.encode("utf-8")).hexdigest()[:12]
 
 
@@ -154,6 +170,8 @@ def clean_attendance(raw_df: pd.DataFrame) -> pd.DataFrame:
         return df
 
     df["player_name"] = df["player_name"].map(normalize_name)
+    df["username_reclub"] = df["username_reclub"].map(normalize_username)
+    df.loc[df["player_name"].eq("") & df["username_reclub"].ne(""), "player_name"] = df["username_reclub"]
     df["phone"] = df["phone"].map(normalize_phone)
     df["venue"] = df["venue"].fillna("").astype(str).str.strip().replace("", "Unknown venue")
     df["session_slot"] = df["session_slot"].fillna("").astype(str).str.strip()
@@ -169,7 +187,7 @@ def clean_attendance(raw_df: pd.DataFrame) -> pd.DataFrame:
         + df["session_slot"].replace("", "session").str.lower().str.replace(r"[^a-z0-9]+", "-", regex=True).str.strip("-")
     )
     df.loc[df["session_id"].eq(""), "session_id"] = generated_session_id[df["session_id"].eq("")]
-    df["player_id"] = df.apply(lambda row: make_player_id(row["player_name"], row["phone"]), axis=1)
+    df["player_id"] = df.apply(lambda row: make_player_id(row["player_name"], row["phone"], row["username_reclub"]), axis=1)
 
     with_session_id = df[df["session_id"].ne("")].drop_duplicates(["player_id", "session_id"])
     without_session_id = df[df["session_id"].eq("")].drop_duplicates(["player_id", "session_date", "venue"])
@@ -192,6 +210,7 @@ def build_player_summary(df: pd.DataFrame, today: datetime | None = None) -> pd.
             columns=[
                 "player_id",
                 "player_name",
+                "username_reclub",
                 "phone",
                 "total_session",
                 "total_stamp",
@@ -213,6 +232,7 @@ def build_player_summary(df: pd.DataFrame, today: datetime | None = None) -> pd.
         df.groupby("player_id")
         .agg(
             player_name=("player_name", "first"),
+            username_reclub=("username_reclub", "first"),
             phone=("phone", "first"),
             total_session=("session_id", "size"),
             total_stamp=("session_id", "size"),
@@ -312,7 +332,11 @@ def find_player(summary: pd.DataFrame, query: str) -> pd.DataFrame:
     phone_query = normalize_phone(query)
     name_pattern = rf"(?:^|\s){re.escape(query)}"
     name_matches = summary["player_name"].str.lower().str.contains(name_pattern, na=False, regex=True)
+    username_matches = pd.Series(False, index=summary.index)
+    if "username_reclub" in summary.columns:
+        username_query = normalize_username(query)
+        username_matches = summary["username_reclub"].str.lower().str.contains(username_query, na=False) if username_query else username_matches
     if not phone_query:
-        return summary[name_matches]
+        return summary[name_matches | username_matches]
     phone_matches = summary["phone"].str.contains(phone_query, na=False)
-    return summary[name_matches | phone_matches]
+    return summary[name_matches | username_matches | phone_matches]

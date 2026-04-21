@@ -13,17 +13,17 @@ require_admin()
 attendance_df, player_summary, _ = load_app_data()
 
 st.title("Player Dashboard")
-st.caption("Cari player dari nama atau nomor HP untuk cek stamp, reward, dan history session.")
+st.caption("Cari player dari username, nama, atau nomor HP untuk cek stamp, reward, dan history session.")
 
-query = st.text_input("Nama atau nomor HP", placeholder="Contoh: Sandi atau 0812...")
+query = st.text_input("Username, nama, atau nomor HP", placeholder="Contoh: sandibh, Sandi, atau 0812...")
 matches = find_player(player_summary, query)
 
 if not query:
-    st.info("Masukkan nama atau nomor HP untuk mulai mencari player.")
+    st.info("Masukkan username, nama, atau nomor HP untuk mulai mencari player.")
     st.stop()
 
 if matches.empty:
-    st.warning(f"Player `{query}` belum ditemukan. Coba cek ejaan nama atau nomor HP yang dipakai saat isi form.")
+    st.warning(f"Player `{query}` belum ditemukan. Coba cek ejaan username, nama, atau nomor HP.")
     st.stop()
 
 selected_name = st.selectbox("Pilih player", matches["player_name"].tolist(), key=f"player_select_{query.lower()}")
@@ -41,6 +41,10 @@ k4.metric("Venue pernah dimainkan", int(player["venue_count"]))
 
 st.markdown("**Nomor HP**")
 st.write(player["phone"] or "-")
+
+if "username_reclub" in player:
+    st.markdown("**Username Reclub**")
+    st.write(f"@{player['username_reclub']}" if player["username_reclub"] else "-")
 
 st.markdown("**Daftar venue**")
 st.write(player["venues"] or "-")

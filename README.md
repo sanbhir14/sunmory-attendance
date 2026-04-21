@@ -4,18 +4,21 @@ Aplikasi web Streamlit untuk tracking attendance, stamp loyalty, reward, leaderb
 
 ## Fitur
 
-- Baca attendance dari Google Sheets tanpa service account via public CSV
+- Baca attendance dari Google Sheets tanpa service account via Apps Script webhook atau public CSV fallback
 - Service account tetap didukung sebagai opsi untuk private Google Sheet
-- Data berasal dari Google Form
+- Attendance bisa diinput langsung dari Streamlit admin
 - Dedup attendance jika kombinasi `player + session_id` sama
-- Unique player ID dari nama dan nomor HP
+- Unique player ID dari Username Reclub, fallback nama dan nomor HP
 - KPI komunitas, leaderboard, recent activity, chart trend attendance
 - Session generator untuk membuat `session_id` dan `session_code`
-- Optional auto-write session dari Streamlit ke tab `sessions` via Apps Script Web App
+- Optional auto-write session, attendance, dan performance dari Streamlit via Apps Script Web App
 - Performance input admin dan public Performance Leaderboard
 - Session Manager untuk ubah status session open/closed
+- Attendance Input untuk check-in player ke open session
+- Player Database untuk cari username, nama, dan referral code
+- Referral code otomatis per player, validasi sekali pakai, dan bonus +1 attendance tiap 3 referral valid
 - Admin authentication untuk Home, Session Generator, Player Dashboard, dan Admin Insights
-- Player dashboard dengan search nama atau nomor HP
+- Player dashboard dengan search username, nama, atau nomor HP
 - Reward milestone:
   - 3 stamp: free drink/snack
   - 5 stamp: diskon session
@@ -32,17 +35,20 @@ Aplikasi web Streamlit untuk tracking attendance, stamp loyalty, reward, leaderb
 |-- google_apps_script/
 |   `-- Code.gs
 |-- views/
+|   |-- attendance_input.py
 |   |-- admin_insights.py
 |   |-- home.py
 |   |-- leaderboard.py
 |   |-- performance_input.py
 |   |-- performance_leaderboard.py
+|   |-- player_database.py
 |   |-- player_dashboard.py
 |   |-- session_manager.py
 |   `-- session_generator.py
 |-- utils/
 |   |-- __init__.py
 |   |-- app_data.py
+|   |-- attendance.py
 |   |-- data_processing.py
 |   |-- google_sheets.py
 |   `-- ui.py
@@ -56,12 +62,14 @@ Aplikasi web Streamlit untuk tracking attendance, stamp loyalty, reward, leaderb
 
 Saran struktur dalam satu file Google Sheets:
 
-- `Form_Responses`: raw data dari Google Form, jangan diedit manual
+- `attendance_log`: raw attendance dari Streamlit Attendance Input
 - `sessions`: daftar session valid dari Session Generator
 - `performance_log`: input poin manual, match, win, lose per session
-- `players_db`: database player hasil olahan, bisa dibuat nanti
-- `referral_log`: log referral valid/invalid, bisa dibuat nanti
-- `reward_log`: log reward yang sudah diclaim, bisa dibuat nanti
+- `players_db`: database player hasil olahan, referral code, stamp, reward
+- `referral_log`: log referral valid/invalid
+- `reward_status`: status reward per player
+
+`Form_Responses` dari Google Form masih bisa dipakai sebagai fallback lama, tapi flow utama sekarang adalah input attendance dari Streamlit.
 
 Untuk step awal, cukup pakai `Form_Responses` dari Google Form.
 
@@ -96,6 +104,32 @@ SESSION_WEBHOOK_TOKEN = "token-yang-sama"
 ```
 
 Setelah aktif, page `Session Generator` akan menampilkan tombol `Write to Google Sheets`.
+
+Endpoint Apps Script yang dipakai:
+
+- `append_session`: tulis session baru ke tab `sessions`
+- `append_attendance`: tulis check-in ke `attendance_log`, rebuild `players_db`, validasi referral, dan tambah bonus referral
+- `append_performance`: tulis match result ke `performance_log`
+- `update_session_status`: ubah session `open`/`closed`
+- `attendance_records`, `players_db`, `all_sessions`, `open_sessions`, `performance_summary`: baca data untuk dashboard
+
+Format tab `attendance_log` akan dibuat otomatis:
+
+| created_at | attendance_id | session_id | session_code | session_date | session_slot | venue | player_name | username_reclub | player_key | referral_code_used | referral_status | attendance_type | notes |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+
+Format tab `players_db` akan dibuat otomatis:
+
+| player_key | username_reclub | player_name | referral_code | total_attendance | total_stamp | last_played | venues | venue_count | eligible_rewards | next_reward | stamps_remaining | referral_used_code | referred_by_player_key | valid_referral_count | referral_bonus_attendance | updated_at |
+|---|---|---|---|---:|---:|---|---|---:|---|---|---:|---|---|---:|---:|---|
+
+Logic referral:
+
+- Setiap player otomatis punya `referral_code`.
+- Player hanya bisa memakai referral code sekali seumur hidup.
+- Self-referral ditolak.
+- Referral code invalid tetap dicatat di `referral_log`, tapi tidak memberi bonus.
+- Setiap 3 referral valid menghasilkan 1 row bonus di `attendance_log` dengan `attendance_type = referral_bonus`.
 
 Field Google Form yang disarankan:
 
@@ -263,6 +297,6 @@ Struktur saat ini sengaja dipisah:
 
 - `utils/google_sheets.py` untuk data source
 - `utils/data_processing.py` untuk logic attendance, reward, dan leaderboard
-- `pages/` untuk UI
+- `views/` untuk UI
 
 Untuk QR check-in ke depan, tambahkan kolom seperti `checkin_method`, `qr_token`, atau `checked_in_by`, lalu prosesnya bisa ditaruh sebagai function baru tanpa mengubah layout utama.

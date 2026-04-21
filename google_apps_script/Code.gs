@@ -1,5 +1,6 @@
 const CONFIG = {
   rawSheetName: 'Form_Responses',
+  attendanceSheetName: 'attendance_log',
   sessionsSheetName: 'sessions',
   performanceSheetName: 'performance_log',
   playersSheetName: 'players_db',
@@ -18,7 +19,12 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('Sunmory')
     .addItem('Process Attendance', 'processAttendance')
+    .addItem('Rebuild Player DB', 'rebuildPlayerDbFromAttendance')
     .addToUi();
+}
+
+function rebuildPlayerDbFromAttendance() {
+  rebuildPlayersDb_(SpreadsheetApp.getActiveSpreadsheet(), true);
 }
 
 function doPost(e) {
@@ -38,6 +44,12 @@ function doPost(e) {
       const records = payload.records || [];
       appendPerformanceRecords_(records);
       return jsonResponse_({ ok: true, inserted: records.length });
+    }
+
+    if (payload.action === 'append_attendance') {
+      const record = payload.attendance || {};
+      const result = appendAttendance_(record);
+      return jsonResponse_(Object.assign({ ok: true }, result));
     }
 
     if (payload.action === 'update_session_status') {
@@ -64,6 +76,12 @@ function doGet(e) {
     }
     if (action === 'all_sessions') {
       return jsonResponse_({ ok: true, data: getAllSessions_() });
+    }
+    if (action === 'attendance_records') {
+      return jsonResponse_({ ok: true, data: getAttendanceRecords_() });
+    }
+    if (action === 'players_db') {
+      return jsonResponse_({ ok: true, data: getPlayersDbRecords_() });
     }
     return jsonResponse_({ ok: false, error: 'Unsupported action' }, 400);
   } catch (error) {
@@ -163,6 +181,298 @@ function updateSessionStatus_(sessionId, status) {
     }
   }
   throw new Error(`Session ${sessionId} tidak ditemukan.`);
+}
+
+function appendAttendance_(record) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sessionId = String(record.session_id || '').trim();
+  const username = normalizeUsername_(record.username_reclub);
+  if (!sessionId) throw new Error('Session wajib dipilih.');
+  if (!username) throw new Error('Username Reclub wajib diisi.');
+
+  const session = findSessionById_(ss, sessionId);
+  if (!session) throw new Error(`Session ${sessionId} tidak ditemukan.`);
+  if (String(session.status || '').toLowerCase() !== 'open') {
+    throw new Error(`Session ${sessionId} sudah closed.`);
+  }
+
+  const header = getAttendanceHeader_();
+  const sheet = ensureSheet_(ss, CONFIG.attendanceSheetName, header);
+  const playerName = normalizeName_(record.player_name || username);
+  const playerKey = makePlayerKeyFromUsername_(username);
+
+  const existingAttendance = recordsFromSheet_(sheet);
+  const duplicate = existingAttendance.some((row) => (
+    String(row.player_key || '').trim() === playerKey
+    && String(row.session_id || '').trim() === sessionId
+    && String(row.attendance_type || 'regular').trim() !== 'referral_bonus'
+  ));
+  if (duplicate) {
+    throw new Error(`${username} sudah check-in di session ini.`);
+  }
+
+  rebuildPlayersDb_(ss, false);
+  const players = readPlayersByKey_(ss);
+  const referralOwners = readPlayersByReferralCode_(ss);
+  const player = players[playerKey] || {};
+  const referralCodeUsed = normalizeReferralCode_(record.referral_code);
+  let referralStatus = referralCodeUsed ? 'invalid_referral_code' : 'no_referral';
+
+  if (referralCodeUsed) {
+    if (String(player.referral_used_code || '').trim()) {
+      referralStatus = 'invalid_already_used_referral';
+    } else {
+      const owner = referralOwners[referralCodeUsed];
+      if (!owner) {
+        referralStatus = 'invalid_referral_code';
+      } else if (String(owner.player_key || '').trim() === playerKey) {
+        referralStatus = 'invalid_self_referral';
+      } else {
+        referralStatus = 'valid_first_referral';
+      }
+    }
+  }
+
+  const attendanceRecord = {
+    created_at: new Date(),
+    attendance_id: makeAttendanceId_(playerKey, sessionId),
+    session_id: sessionId,
+    session_code: String(session.session_code || record.session_code || '').trim().toUpperCase(),
+    session_date: session.session_date || record.session_date || '',
+    session_slot: String(session.session_slot || record.session_slot || '').trim(),
+    venue: String(session.venue || record.venue || '').trim(),
+    player_name: playerName,
+    username_reclub: username,
+    player_key: playerKey,
+    referral_code_used: referralCodeUsed,
+    referral_status: referralStatus,
+    attendance_type: 'regular',
+    notes: String(record.notes || '').trim(),
+  };
+
+  sheet.appendRow(header.map((key) => attendanceRecord[key] || ''));
+  rebuildPlayersDb_(ss, true);
+  return {
+    attendance_id: attendanceRecord.attendance_id,
+    player_name: playerName,
+    username_reclub: username,
+    referral_status: referralStatus,
+  };
+}
+
+function getAttendanceRecords_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(CONFIG.attendanceSheetName);
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  return recordsFromSheet_(sheet);
+}
+
+function getPlayersDbRecords_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(CONFIG.playersSheetName);
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  return recordsFromSheet_(sheet);
+}
+
+function rebuildPlayersDb_(ss, addMissingBonuses) {
+  const attendanceSheet = ensureSheet_(ss, CONFIG.attendanceSheetName, getAttendanceHeader_());
+  let attendance = recordsFromSheet_(attendanceSheet);
+  const existingPlayers = readPlayersByKey_(ss);
+  const existingCodes = {};
+  Object.values(existingPlayers).forEach((player) => {
+    const code = normalizeReferralCode_(player.referral_code);
+    if (code) existingCodes[code] = true;
+  });
+
+  let build = buildPlayersDbFromAttendance_(attendance, existingPlayers, existingCodes);
+  if (addMissingBonuses) {
+    const added = appendMissingReferralBonuses_(attendanceSheet, build.players, attendance);
+    if (added > 0) {
+      attendance = recordsFromSheet_(attendanceSheet);
+      const generatedPlayers = {};
+      Object.values(build.players).forEach((player) => {
+        generatedPlayers[player.player_key] = player;
+      });
+      build = buildPlayersDbFromAttendance_(attendance, Object.assign({}, existingPlayers, generatedPlayers), existingCodes);
+    }
+  }
+
+  writeSheet_(ss, CONFIG.playersSheetName, getPlayerDbHeader_(), build.playerRows);
+  writeSheet_(ss, CONFIG.referralSheetName, getReferralHeader_(), build.referralRows);
+  writeSheet_(ss, CONFIG.rewardSheetName, getRewardHeader_(), build.rewardRows);
+}
+
+function buildPlayersDbFromAttendance_(attendance, existingPlayers, existingCodes) {
+  const players = {};
+  const referralRows = [];
+  const rewardRows = [];
+
+  attendance.forEach((row) => {
+    const username = normalizeUsername_(row.username_reclub);
+    const playerKey = String(row.player_key || makePlayerKeyFromUsername_(username)).trim();
+    if (!playerKey) return;
+
+    if (!players[playerKey]) {
+      const existing = existingPlayers[playerKey] || {};
+      const referralCode = normalizeReferralCode_(existing.referral_code) || generateReferralCode_(username || row.player_name, existingCodes);
+      players[playerKey] = {
+        player_key: playerKey,
+        username_reclub: username,
+        player_name: normalizeName_(row.player_name || username),
+        referral_code: referralCode,
+        total_attendance: 0,
+        total_stamp: 0,
+        last_played: '',
+        venues: {},
+        referral_used_code: String(existing.referral_used_code || '').trim(),
+        referred_by_player_key: String(existing.referred_by_player_key || '').trim(),
+        valid_referral_count: 0,
+        referral_bonus_attendance: 0,
+      };
+    }
+
+    const player = players[playerKey];
+    if (username) player.username_reclub = username;
+    if (row.player_name) player.player_name = normalizeName_(row.player_name);
+    player.total_attendance += 1;
+    player.total_stamp += 1;
+
+    const attendanceType = String(row.attendance_type || 'regular').trim();
+    if (attendanceType === 'referral_bonus') {
+      player.referral_bonus_attendance += 1;
+    } else {
+      if (row.venue) player.venues[String(row.venue).trim()] = true;
+      if (row.session_date && String(row.session_date) > String(player.last_played || '')) {
+        player.last_played = row.session_date;
+      }
+    }
+
+    if (String(row.referral_status || '').trim() === 'valid_first_referral' && !player.referral_used_code) {
+      player.referral_used_code = normalizeReferralCode_(row.referral_code_used);
+    }
+  });
+
+  const referralOwners = {};
+  Object.values(players).forEach((player) => {
+    referralOwners[player.referral_code] = player;
+  });
+
+  const countedReferralUsers = {};
+  attendance.forEach((row) => {
+    if (String(row.referral_status || '').trim() !== 'valid_first_referral') return;
+    const referredKey = String(row.player_key || '').trim();
+    if (!referredKey || countedReferralUsers[referredKey]) return;
+    countedReferralUsers[referredKey] = true;
+
+    const code = normalizeReferralCode_(row.referral_code_used);
+    const owner = referralOwners[code];
+    if (!owner || owner.player_key === referredKey) return;
+
+    owner.valid_referral_count += 1;
+    players[referredKey].referred_by_player_key = owner.player_key;
+    referralRows.push([
+      row.created_at || '',
+      row.session_date || '',
+      players[referredKey].player_name,
+      referredKey,
+      code,
+      owner.player_key,
+      'valid_first_referral',
+    ]);
+  });
+
+  attendance.forEach((row) => {
+    const status = String(row.referral_status || '').trim();
+    if (!status || status === 'valid_first_referral' || status === 'no_referral') return;
+    referralRows.push([
+      row.created_at || '',
+      row.session_date || '',
+      row.player_name || '',
+      row.player_key || '',
+      row.referral_code_used || '',
+      '',
+      status,
+    ]);
+  });
+
+  const playerRows = Object.values(players)
+    .sort((a, b) => b.total_stamp - a.total_stamp || String(a.player_name).localeCompare(String(b.player_name)))
+    .map((player) => {
+      const next = getNextReward_(player.total_stamp);
+      const eligible = getEligibleRewards_(player.total_stamp).join(', ');
+      const venues = Object.keys(player.venues).sort();
+      rewardRows.push([
+        player.player_key,
+        player.player_name,
+        player.total_stamp,
+        eligible,
+        next.reward,
+        next.stamps_remaining,
+        next.stamps_remaining === 0 ? 'eligible_all_main_rewards' : 'in_progress',
+      ]);
+      return [
+        player.player_key,
+        player.username_reclub,
+        player.player_name,
+        player.referral_code,
+        player.total_attendance,
+        player.total_stamp,
+        player.last_played,
+        venues.join(', '),
+        venues.length,
+        eligible,
+        next.reward,
+        next.stamps_remaining,
+        player.referral_used_code,
+        player.referred_by_player_key,
+        player.valid_referral_count,
+        player.referral_bonus_attendance,
+        new Date(),
+      ];
+    });
+
+  return { players, playerRows, referralRows, rewardRows };
+}
+
+function appendMissingReferralBonuses_(attendanceSheet, players, attendance) {
+  const header = getAttendanceHeader_();
+  const existingBonus = {};
+  attendance.forEach((row) => {
+    if (String(row.attendance_type || '').trim() !== 'referral_bonus') return;
+    const key = String(row.player_key || '').trim();
+    existingBonus[key] = (existingBonus[key] || 0) + 1;
+  });
+
+  const rowsToAppend = [];
+  Object.values(players).forEach((player) => {
+    const bonusTarget = Math.floor(Number(player.valid_referral_count || 0) / 3);
+    const already = existingBonus[player.player_key] || 0;
+    for (let index = already + 1; index <= bonusTarget; index += 1) {
+      const bonusSessionId = `REFERRAL-BONUS-${player.player_key}-${index}`;
+      const record = {
+        created_at: new Date(),
+        attendance_id: makeAttendanceId_(player.player_key, bonusSessionId),
+        session_id: bonusSessionId,
+        session_code: `REF${index}`,
+        session_date: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd'),
+        session_slot: 'Referral bonus',
+        venue: 'Referral bonus',
+        player_name: player.player_name,
+        username_reclub: player.username_reclub,
+        player_key: player.player_key,
+        referral_code_used: '',
+        referral_status: 'bonus_from_3_referrals',
+        attendance_type: 'referral_bonus',
+        notes: `Bonus attendance dari ${index * 3} referral valid`,
+      };
+      rowsToAppend.push(header.map((key) => record[key] || ''));
+    }
+  });
+
+  if (rowsToAppend.length) {
+    attendanceSheet.getRange(attendanceSheet.getLastRow() + 1, 1, rowsToAppend.length, header.length).setValues(rowsToAppend);
+  }
+  return rowsToAppend.length;
 }
 
 function appendPerformanceRecords_(records) {
@@ -368,6 +678,7 @@ function buildReferralLog_(rows) {
         row.name,
         row.player_key,
         row.referral_code,
+        '',
         status,
       ];
     });
@@ -408,11 +719,52 @@ function getPlayersHeader_() {
 }
 
 function getReferralHeader_() {
-  return ['timestamp', 'date', 'name', 'player_key', 'referral_code', 'status'];
+  return ['timestamp', 'date', 'name', 'player_key', 'referral_code', 'referrer_player_key', 'status'];
 }
 
 function getRewardHeader_() {
   return ['player_key', 'name', 'total_stamp', 'eligible_rewards', 'next_reward', 'stamps_remaining', 'status'];
+}
+
+function getAttendanceHeader_() {
+  return [
+    'created_at',
+    'attendance_id',
+    'session_id',
+    'session_code',
+    'session_date',
+    'session_slot',
+    'venue',
+    'player_name',
+    'username_reclub',
+    'player_key',
+    'referral_code_used',
+    'referral_status',
+    'attendance_type',
+    'notes',
+  ];
+}
+
+function getPlayerDbHeader_() {
+  return [
+    'player_key',
+    'username_reclub',
+    'player_name',
+    'referral_code',
+    'total_attendance',
+    'total_stamp',
+    'last_played',
+    'venues',
+    'venue_count',
+    'eligible_rewards',
+    'next_reward',
+    'stamps_remaining',
+    'referral_used_code',
+    'referred_by_player_key',
+    'valid_referral_count',
+    'referral_bonus_attendance',
+    'updated_at',
+  ];
 }
 
 function getSessionsHeader_() {
@@ -448,6 +800,64 @@ function writeSheet_(ss, sheetName, header, rows) {
   sheet.autoResizeColumns(1, header.length);
 }
 
+function ensureSheet_(ss, sheetName, header) {
+  let sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+    sheet.getRange(1, 1, 1, header.length).setValues([header]);
+    sheet.setFrozenRows(1);
+    sheet.autoResizeColumns(1, header.length);
+    return sheet;
+  }
+
+  if (sheet.getLastRow() === 0) {
+    sheet.getRange(1, 1, 1, header.length).setValues([header]);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function recordsFromSheet_(sheet) {
+  const values = sheet.getDataRange().getValues();
+  if (values.length < 2) return [];
+  const headers = values[0].map((header) => String(header || '').trim());
+  return values.slice(1).map((row) => {
+    const record = {};
+    headers.forEach((header, index) => {
+      record[header] = row[index];
+    });
+    return record;
+  });
+}
+
+function findSessionById_(ss, sessionId) {
+  const sheet = ss.getSheetByName(CONFIG.sessionsSheetName);
+  if (!sheet || sheet.getLastRow() < 2) return null;
+  const records = recordsFromSheet_(sheet);
+  return records.find((record) => String(record.session_id || '').trim() === sessionId) || null;
+}
+
+function readPlayersByKey_(ss) {
+  const sheet = ss.getSheetByName(CONFIG.playersSheetName);
+  if (!sheet || sheet.getLastRow() < 2) return {};
+  const players = {};
+  recordsFromSheet_(sheet).forEach((record) => {
+    const key = String(record.player_key || '').trim();
+    if (key) players[key] = record;
+  });
+  return players;
+}
+
+function readPlayersByReferralCode_(ss) {
+  const players = readPlayersByKey_(ss);
+  const byCode = {};
+  Object.values(players).forEach((player) => {
+    const code = normalizeReferralCode_(player.referral_code);
+    if (code) byCode[code] = player;
+  });
+  return byCode;
+}
+
 function getSheetByPossibleNames_(ss, names) {
   for (const name of names) {
     const sheet = ss.getSheetByName(name);
@@ -476,14 +886,46 @@ function normalizeName_(name) {
   return String(name || '').trim().replace(/\s+/g, ' ').toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+function normalizeUsername_(username) {
+  return String(username || '').trim().replace(/^@+/, '').toLowerCase();
+}
+
 function normalizeReferralCode_(code) {
   const cleaned = String(code || '').trim().toUpperCase();
   if (!cleaned || ['-', 'NO', 'NONE', 'N/A', 'NA', 'TIDAK', 'GA', 'GAK'].includes(cleaned)) return '';
   return cleaned;
 }
 
+function makePlayerKeyFromUsername_(username) {
+  const normalized = normalizeUsername_(username);
+  if (!normalized) return '';
+  return `reclub-${normalized.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}`;
+}
+
 function makePlayerKey_(name) {
   return normalizeName_(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+function generateReferralCode_(seed, existingCodes) {
+  const cleaned = String(seed || 'SPC').toUpperCase().replace(/[^A-Z0-9]+/g, '');
+  const prefix = (cleaned || 'SPC').slice(0, 5).padEnd(3, 'X');
+  let counter = 1;
+  let code = `${prefix}${counter}`;
+  while (existingCodes[code]) {
+    counter += 1;
+    code = `${prefix}${counter}`;
+  }
+  existingCodes[code] = true;
+  return code;
+}
+
+function makeAttendanceId_(playerKey, sessionId) {
+  const raw = `${playerKey}::${sessionId}`;
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_1, raw)
+    .map((byte) => (`0${(byte + 256).toString(16)}`).slice(-2))
+    .join('')
+    .slice(0, 12);
+  return `ATT-${digest}`;
 }
 
 function makeSessionId_(date, venue) {
