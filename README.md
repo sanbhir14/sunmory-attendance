@@ -16,7 +16,9 @@ Aplikasi web Streamlit untuk tracking attendance, stamp loyalty, reward, leaderb
 - Session Manager untuk ubah status session open/closed
 - Attendance Input untuk check-in player ke open session
 - Player Database untuk cari username, nama, dan referral code
+- Financial Tracker untuk income, expense venue, paid by, reward claim, dan profit per session
 - Referral code otomatis per player, validasi sekali pakai, dan bonus +1 attendance tiap 3 referral valid
+- Session Generator menyimpan expense venue, harga per player, dan paid by
 - Admin authentication untuk Home, Session Generator, Player Dashboard, dan Admin Insights
 - Player dashboard dengan search username, nama, atau nomor HP
 - Reward milestone:
@@ -75,9 +77,9 @@ Untuk step awal, cukup pakai `Form_Responses` dari Google Form.
 
 Format tab `sessions` yang disarankan:
 
-| session_id | session_code | venue | session_date | session_slot | status | created_at |
-|---|---|---|---|---|---|---|
-| SPC-20260420-NEO-PADEL-JATIWARINGIN-MORNING | A7K2Q9 | Neo Padel Jatiwaringin | 2026-04-20 | Morning | open | 2026-04-20 07:00:00 |
+| session_id | session_code | venue | session_date | session_slot | status | expense_amount | player_price | paid_by | created_at |
+|---|---|---|---|---|---|---:|---:|---|---|
+| SPC-20260420-NEO-PADEL-JATIWARINGIN-MORNING | A7K2Q9 | Neo Padel Jatiwaringin | 2026-04-20 | Morning | open | 410000 | 80000 | Sandi | 2026-04-20 07:00:00 |
 
 ## Auto-write Session Generator ke Google Sheets
 

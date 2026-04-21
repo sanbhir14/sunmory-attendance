@@ -11,6 +11,11 @@ from utils.session_tools import build_session_record, generate_session_code, ses
 
 require_admin()
 
+VENUE_DEFAULTS = {
+    "Victoria Social Club Kemang": {"expense_amount": 610_000, "player_price": 120_000},
+    "Neo Padel Jatiwaringin": {"expense_amount": 410_000, "player_price": 80_000},
+}
+
 def secret_value(key: str, default: str = "") -> str:
     try:
         return str(st.secrets.get(key, default))
@@ -58,21 +63,36 @@ with st.form("session_generator_form"):
             [
                 "Neo Padel Jatiwaringin",
                 "Victoria Social Club Kemang",
+                "Custom venue",
             ],
         )
+        if venue == "Custom venue":
+            venue = st.text_input("Nama venue", placeholder="Nama venue baru")
     with col2:
         session_slot = st.text_input("Slot / jam main", placeholder="Contoh: 07:00-09:00 atau Morning")
         status = st.selectbox("Status", ["open", "closed"], index=0)
 
+    defaults = VENUE_DEFAULTS.get(venue, {"expense_amount": 0, "player_price": 0})
+    money_col1, money_col2, money_col3 = st.columns(3)
+    expense_amount = money_col1.number_input("Expense venue", min_value=0, step=10_000, value=defaults["expense_amount"])
+    player_price = money_col2.number_input("Harga per player", min_value=0, step=10_000, value=defaults["player_price"])
+    paid_by = money_col3.text_input("Paid by", placeholder="Contoh: Sandi")
+
     submitted = st.form_submit_button("Generate Session Code", use_container_width=True)
 
 if submitted:
+    if not str(venue).strip():
+        st.error("Nama venue wajib diisi.")
+        st.stop()
     st.session_state.generated_session_code = generate_session_code()
     st.session_state.generated_session_record = build_session_record(
         session_date=session_date,
         venue=venue,
         session_slot=session_slot,
         session_code=st.session_state.generated_session_code,
+        expense_amount=expense_amount,
+        player_price=player_price,
+        paid_by=paid_by,
         status=status,
     )
     st.session_state.session_write_result = None
@@ -86,6 +106,11 @@ if record:
     k1.metric("Session Code", record["session_code"])
     k2.metric("Tanggal", record["session_date"])
     k3.metric("Status", record["status"])
+
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Expense venue", f"Rp {int(record['expense_amount']):,}")
+    m2.metric("Harga/player", f"Rp {int(record['player_price']):,}")
+    m3.metric("Paid by", record["paid_by"] or "-")
 
     st.markdown("**Session ID**")
     st.code(record["session_id"], language="text")
@@ -130,6 +155,9 @@ if record:
             "session_date": "session_date",
             "session_slot": "session_slot",
             "status": "status",
+            "expense_amount": "expense_amount",
+            "player_price": "player_price",
+            "paid_by": "paid_by",
             "created_at": "created_at",
         },
     )

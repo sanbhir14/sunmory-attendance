@@ -53,9 +53,21 @@ def load_all_sessions() -> tuple[pd.DataFrame, str]:
     if sessions.empty:
         return sessions, "Belum ada session."
 
-    for column in ["session_id", "session_code", "venue", "session_date", "session_slot", "status"]:
+    for column in [
+        "session_id",
+        "session_code",
+        "venue",
+        "session_date",
+        "session_slot",
+        "status",
+        "expense_amount",
+        "player_price",
+        "paid_by",
+    ]:
         if column not in sessions.columns:
             sessions[column] = ""
+    for column in ["expense_amount", "player_price"]:
+        sessions[column] = pd.to_numeric(sessions[column], errors="coerce").fillna(0)
     return sessions, "Sessions dari Google Sheets"
 
 

@@ -35,6 +35,7 @@ if is_admin_authenticated():
             st.Page("views/attendance_input.py", title="Attendance Input"),
             st.Page("views/performance_input.py", title="Performance Input"),
             st.Page("views/player_database.py", title="Player Database"),
+            st.Page("views/financial_tracker.py", title="Financial Tracker"),
             st.Page("views/player_dashboard.py", title="Player Dashboard"),
             st.Page("views/admin_insights.py", title="Admin Insights"),
         ],

@@ -30,6 +30,9 @@ def build_session_record(
     venue: str,
     session_slot: str,
     session_code: str,
+    expense_amount: int,
+    player_price: int,
+    paid_by: str,
     status: str = "open",
 ) -> dict:
     return {
@@ -39,11 +42,14 @@ def build_session_record(
         "session_date": session_date.isoformat(),
         "session_slot": session_slot.strip() or "Session",
         "status": status,
+        "expense_amount": int(expense_amount or 0),
+        "player_price": int(player_price or 0),
+        "paid_by": paid_by.strip(),
         "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
 
 
 def session_record_to_csv(record: dict) -> str:
-    header = "session_id,session_code,venue,session_date,session_slot,status,created_at"
+    header = "session_id,session_code,venue,session_date,session_slot,status,expense_amount,player_price,paid_by,created_at"
     row = ",".join(str(record[key]) for key in header.split(","))
     return f"{header}\n{row}\n"

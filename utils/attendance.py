@@ -78,6 +78,32 @@ def submit_attendance(record: dict) -> tuple[bool, str]:
     return True, f"Attendance {player_name} berhasil ditulis.{suffix}"
 
 
+def eligible_reward_options(player: dict) -> list[str]:
+    try:
+        total_stamp = int(float(player.get("total_stamp", 0)))
+    except Exception:
+        total_stamp = 0
+
+    options = ["Tidak claim reward"]
+    if total_stamp >= 3:
+        options.append("10% diskon session")
+    if total_stamp >= 5:
+        options.append("Free coffee")
+    if total_stamp >= 8:
+        options.append("20% diskon session")
+    if total_stamp >= 10:
+        options.append("50% diskon session")
+    return options
+
+
+def reward_discount_percent(reward_name: str) -> int:
+    return {
+        "10% diskon session": 10,
+        "20% diskon session": 20,
+        "50% diskon session": 50,
+    }.get(reward_name, 0)
+
+
 def rebuild_players_db() -> tuple[bool, str]:
     webhook_url = performance_webhook_url()
     if not webhook_url:

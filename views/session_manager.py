@@ -19,7 +19,17 @@ if sessions.empty:
     st.warning("Belum ada session. Generate session dulu dari Session Generator.")
     st.stop()
 
-display_columns = ["session_date", "venue", "session_slot", "session_code", "status", "session_id"]
+display_columns = [
+    "session_date",
+    "venue",
+    "session_slot",
+    "session_code",
+    "status",
+    "expense_amount",
+    "player_price",
+    "paid_by",
+    "session_id",
+]
 existing_columns = [column for column in display_columns if column in sessions.columns]
 
 open_count = int((sessions["status"].astype(str).str.lower() == "open").sum())
@@ -40,6 +50,9 @@ st.dataframe(
         "session_slot": "Slot",
         "session_code": "Code",
         "status": "Status",
+        "expense_amount": "Expense",
+        "player_price": "Harga/player",
+        "paid_by": "Paid by",
         "session_id": "Session ID",
     },
 )

@@ -52,10 +52,10 @@ COLUMN_ALIASES = {
 }
 
 REWARD_MILESTONES = [
-    (3, "Free drink/snack"),
-    (5, "Diskon session"),
-    (10, "Free 1 session"),
-    (15, "VIP / priority booking"),
+    (3, "10% diskon session"),
+    (5, "Free coffee"),
+    (8, "20% diskon session"),
+    (10, "50% diskon session"),
 ]
 
 

@@ -8,10 +8,10 @@ const CONFIG = {
   rewardSheetName: 'reward_status',
   webhookToken: '',
   rewards: [
-    { stamps: 3, reward: 'Free drink/snack' },
-    { stamps: 5, reward: 'Diskon session' },
-    { stamps: 10, reward: 'Free 1 session' },
-    { stamps: 15, reward: 'VIP / priority booking' },
+    { stamps: 3, reward: '10% diskon session' },
+    { stamps: 5, reward: 'Free coffee' },
+    { stamps: 8, reward: '20% diskon session' },
+    { stamps: 10, reward: '50% diskon session' },
   ],
 };
 
@@ -124,12 +124,7 @@ function processAttendance() {
 function appendSession_(record) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const header = getSessionsHeader_();
-  let sheet = ss.getSheetByName(CONFIG.sessionsSheetName);
-  if (!sheet) {
-    sheet = ss.insertSheet(CONFIG.sessionsSheetName);
-    sheet.getRange(1, 1, 1, header.length).setValues([header]);
-    sheet.setFrozenRows(1);
-  }
+  const sheet = ensureSheet_(ss, CONFIG.sessionsSheetName, header);
 
   const existingValues = sheet.getDataRange().getValues();
   const existingSessionIds = existingValues.slice(1).map((row) => String(row[0] || '').trim());
@@ -252,6 +247,10 @@ function appendAttendance_(record) {
     referral_code_used: referralCodeUsed,
     referral_status: referralStatus,
     attendance_type: 'regular',
+    base_price: Number(session.player_price || record.base_price || 0),
+    claimed_reward: normalizeClaimedReward_(record.claimed_reward),
+    discount_percent: getRewardDiscountPercent_(normalizeClaimedReward_(record.claimed_reward)),
+    income_amount: calculateIncomeAmount_(Number(session.player_price || record.base_price || 0), normalizeClaimedReward_(record.claimed_reward)),
     notes: String(record.notes || '').trim(),
   };
 
@@ -470,6 +469,10 @@ function appendMissingReferralBonuses_(attendanceSheet, players, attendance) {
         referral_code_used: '',
         referral_status: 'bonus_from_3_referrals',
         attendance_type: 'referral_bonus',
+        base_price: 0,
+        claimed_reward: '',
+        discount_percent: 0,
+        income_amount: 0,
         notes: `Bonus attendance dari ${index * 3} referral valid`,
       };
       rowsToAppend.push(header.map((key) => record[key] || ''));
@@ -748,6 +751,10 @@ function getAttendanceHeader_() {
     'referral_code_used',
     'referral_status',
     'attendance_type',
+    'base_price',
+    'claimed_reward',
+    'discount_percent',
+    'income_amount',
     'notes',
   ];
 }
@@ -775,7 +782,7 @@ function getPlayerDbHeader_() {
 }
 
 function getSessionsHeader_() {
-  return ['session_id', 'session_code', 'venue', 'session_date', 'session_slot', 'status', 'created_at'];
+  return ['session_id', 'session_code', 'venue', 'session_date', 'session_slot', 'status', 'expense_amount', 'player_price', 'paid_by', 'created_at'];
 }
 
 function getPerformanceHeader_() {
@@ -820,6 +827,14 @@ function ensureSheet_(ss, sheetName, header) {
   if (sheet.getLastRow() === 0) {
     sheet.getRange(1, 1, 1, header.length).setValues([header]);
     sheet.setFrozenRows(1);
+    return sheet;
+  }
+
+  const currentHeaders = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0].map((value) => String(value || '').trim());
+  const missingHeaders = header.filter((value) => !currentHeaders.includes(value));
+  if (missingHeaders.length) {
+    sheet.getRange(1, currentHeaders.length + 1, 1, missingHeaders.length).setValues([missingHeaders]);
+    sheet.autoResizeColumns(1, currentHeaders.length + missingHeaders.length);
   }
   return sheet;
 }
@@ -901,6 +916,26 @@ function normalizeReferralCode_(code) {
   const cleaned = String(code || '').trim().toUpperCase();
   if (!cleaned || ['-', 'NO', 'NONE', 'N/A', 'NA', 'TIDAK', 'GA', 'GAK'].includes(cleaned)) return '';
   return cleaned;
+}
+
+function normalizeClaimedReward_(reward) {
+  const cleaned = String(reward || '').trim();
+  if (!cleaned || cleaned === 'Tidak claim reward') return '';
+  return cleaned;
+}
+
+function getRewardDiscountPercent_(reward) {
+  const cleaned = normalizeClaimedReward_(reward);
+  if (cleaned === '10% diskon session') return 10;
+  if (cleaned === '20% diskon session') return 20;
+  if (cleaned === '50% diskon session') return 50;
+  return 0;
+}
+
+function calculateIncomeAmount_(basePrice, reward) {
+  const price = Number(basePrice || 0);
+  const discount = getRewardDiscountPercent_(reward);
+  return Math.round(price * (100 - discount) / 100);
 }
 
 function makePlayerKeyFromUsername_(username) {
