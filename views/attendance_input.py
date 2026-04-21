@@ -47,22 +47,24 @@ if not players.empty:
             player_options.append(label)
             player_lookup[label] = row
 
+selected_session_label = st.selectbox("Pilih open session", sessions["label"].tolist())
+selected_session = sessions[sessions["label"] == selected_session_label].iloc[0]
+
+col1, col2, col3 = st.columns(3)
+col1.text_input("Session Code", value=str(selected_session["session_code"]), disabled=True)
+col2.text_input("Tanggal", value=str(selected_session["session_date"]), disabled=True)
+col3.text_input("Venue", value=str(selected_session["venue"]), disabled=True)
+
+selected_player_label = st.selectbox("Username Reclub", player_options)
+selected_player = player_lookup.get(selected_player_label, {})
+
 with st.form("attendance_input_form"):
-    selected_session_label = st.selectbox("Pilih open session", sessions["label"].tolist())
-    selected_session = sessions[sessions["label"] == selected_session_label].iloc[0]
-
-    col1, col2, col3 = st.columns(3)
-    col1.text_input("Session Code", value=str(selected_session["session_code"]), disabled=True)
-    col2.text_input("Tanggal", value=str(selected_session["session_date"]), disabled=True)
-    col3.text_input("Venue", value=str(selected_session["venue"]), disabled=True)
-
-    selected_player_label = st.selectbox("Username Reclub", player_options)
-    selected_player = player_lookup.get(selected_player_label, {})
-
     if selected_player:
-        username_reclub = str(selected_player.get("username_reclub", "")).strip()
-        player_name = st.text_input("Name (optional)", value=str(selected_player.get("player_name") or selected_player.get("name") or ""))
-        st.caption("Player existing dipilih dari players_db. Nama bisa dirapikan kalau perlu.")
+        username_reclub = str(selected_player.get("username_reclub", "")).strip().lstrip("@").lower()
+        player_name = str(selected_player.get("player_name") or selected_player.get("name") or "").strip()
+        st.text_input("Username Reclub", value=f"@{username_reclub}" if username_reclub else "", disabled=True)
+        st.text_input("Name (optional)", value=player_name, disabled=True)
+        st.caption("Player existing dipilih dari players_db.")
     else:
         username_reclub = st.text_input("Username Reclub", placeholder="contoh: sandibh")
         player_name = st.text_input("Name (optional)", placeholder="Nama player kalau ada")
