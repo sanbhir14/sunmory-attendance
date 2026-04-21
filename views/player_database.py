@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import pandas as pd
 import streamlit as st
+import pandas as pd
 
-from utils.attendance import load_players_db
+from utils.attendance import load_players_db, rebuild_players_db
 from utils.auth import require_admin
 from utils.ui import dataframe_dates
 
@@ -30,6 +30,18 @@ for column in [
 ]:
     if column in players.columns:
         players[column] = pd.to_numeric(players[column], errors="coerce").fillna(0).astype(int)
+
+if {"total_attendance", "total_stamp"}.issubset(players.columns):
+    players["total_attendance"] = players[["total_attendance", "total_stamp"]].max(axis=1)
+
+if st.button("Sync players_db dari attendance_log", use_container_width=True):
+    ok, sync_message = rebuild_players_db()
+    if ok:
+        st.success(sync_message)
+        st.cache_data.clear()
+        st.rerun()
+    else:
+        st.error(sync_message)
 
 k1, k2, k3, k4 = st.columns(4)
 k1.metric("Total player", len(players))

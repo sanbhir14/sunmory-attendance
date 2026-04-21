@@ -59,6 +59,11 @@ function doPost(e) {
       return jsonResponse_({ ok: true, session_id: sessionId, status });
     }
 
+    if (payload.action === 'rebuild_players_db') {
+      rebuildPlayersDb_(SpreadsheetApp.getActiveSpreadsheet(), true);
+      return jsonResponse_({ ok: true });
+    }
+
     return jsonResponse_({ ok: false, error: 'Unsupported action' }, 400);
   } catch (error) {
     return jsonResponse_({ ok: false, error: String(error.message || error) }, 500);
@@ -398,13 +403,15 @@ function buildPlayersDbFromAttendance_(attendance, existingPlayers, existingCode
   const playerRows = Object.values(players)
     .sort((a, b) => b.total_stamp - a.total_stamp || String(a.player_name).localeCompare(String(b.player_name)))
     .map((player) => {
-      const next = getNextReward_(player.total_stamp);
-      const eligible = getEligibleRewards_(player.total_stamp).join(', ');
+      const totalStamp = Math.max(Number(player.total_stamp || 0), Number(player.total_attendance || 0));
+      const totalAttendance = Math.max(Number(player.total_attendance || 0), totalStamp);
+      const next = getNextReward_(totalStamp);
+      const eligible = getEligibleRewards_(totalStamp).join(', ');
       const venues = Object.keys(player.venues).sort();
       rewardRows.push([
         player.player_key,
         player.player_name,
-        player.total_stamp,
+        totalStamp,
         eligible,
         next.reward,
         next.stamps_remaining,
@@ -415,8 +422,8 @@ function buildPlayersDbFromAttendance_(attendance, existingPlayers, existingCode
         player.username_reclub,
         player.player_name,
         player.referral_code,
-        player.total_attendance,
-        player.total_stamp,
+        totalAttendance,
+        totalStamp,
         player.last_played,
         venues.join(', '),
         venues.length,
