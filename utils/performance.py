@@ -171,8 +171,9 @@ def prepare_performance_records(
 ) -> list[dict]:
     records: list[dict] = []
     for row in rows.fillna("").to_dict("records"):
+        username_reclub = str(row.get("username_reclub", "")).strip().lstrip("@").lower()
         player_name = str(row.get("player_name", "")).strip()
-        if not player_name:
+        if not player_name and not username_reclub:
             continue
 
         matches_played = int(row.get("matches_played") or 0)
@@ -187,6 +188,7 @@ def prepare_performance_records(
                 "session_code": session_code.strip().upper(),
                 "session_date": pd.to_datetime(session_date).date().isoformat(),
                 "venue": venue.strip(),
+                "username_reclub": username_reclub,
                 "player_name": player_name,
                 "matches_played": matches_played,
                 "wins": wins,

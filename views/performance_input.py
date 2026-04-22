@@ -51,10 +51,10 @@ with st.form("performance_session_form"):
     st.markdown("**Player performance**")
     initial_rows = pd.DataFrame(
         [
-            {"player_name": "", "matches_played": 0, "wins": 0, "losses": 0, "points": 0, "notes": ""},
-            {"player_name": "", "matches_played": 0, "wins": 0, "losses": 0, "points": 0, "notes": ""},
-            {"player_name": "", "matches_played": 0, "wins": 0, "losses": 0, "points": 0, "notes": ""},
-            {"player_name": "", "matches_played": 0, "wins": 0, "losses": 0, "points": 0, "notes": ""},
+            {"username_reclub": "", "player_name": "", "matches_played": 0, "wins": 0, "losses": 0, "points": 0, "notes": ""},
+            {"username_reclub": "", "player_name": "", "matches_played": 0, "wins": 0, "losses": 0, "points": 0, "notes": ""},
+            {"username_reclub": "", "player_name": "", "matches_played": 0, "wins": 0, "losses": 0, "points": 0, "notes": ""},
+            {"username_reclub": "", "player_name": "", "matches_played": 0, "wins": 0, "losses": 0, "points": 0, "notes": ""},
         ]
     )
     rows = st.data_editor(
@@ -62,7 +62,8 @@ with st.form("performance_session_form"):
         num_rows="dynamic",
         use_container_width=True,
         column_config={
-            "player_name": st.column_config.TextColumn("Player", required=False),
+            "username_reclub": st.column_config.TextColumn("Username", required=False),
+            "player_name": st.column_config.TextColumn("Nama", required=False),
             "matches_played": st.column_config.NumberColumn("Match", min_value=0, step=1),
             "wins": st.column_config.NumberColumn("Win", min_value=0, step=1),
             "losses": st.column_config.NumberColumn("Lose", min_value=0, step=1),

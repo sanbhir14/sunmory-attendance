@@ -588,16 +588,13 @@ function appendMissingReferralBonuses_(attendanceSheet, players, attendance) {
 function appendPerformanceRecords_(records) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const header = getPerformanceHeader_();
-  let sheet = ss.getSheetByName(CONFIG.performanceSheetName);
-  if (!sheet) {
-    sheet = ss.insertSheet(CONFIG.performanceSheetName);
-    sheet.getRange(1, 1, 1, header.length).setValues([header]);
-    sheet.setFrozenRows(1);
-  }
+  const sheet = ensureSheet_(ss, CONFIG.performanceSheetName, header);
+  const sheetHeaders = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0].map((value) => String(value || '').trim());
 
   const rows = records
-    .filter((record) => String(record.player_name || '').trim())
+    .filter((record) => String(record.player_name || '').trim() || String(record.username_reclub || '').trim())
     .map((record) => {
+      const username = normalizeUsername_(record.username_reclub);
       const playerName = normalizeName_(record.player_name);
       const enriched = {
         created_at: record.created_at || new Date(),
@@ -605,23 +602,24 @@ function appendPerformanceRecords_(records) {
         session_code: String(record.session_code || '').trim().toUpperCase(),
         session_date: record.session_date || '',
         venue: String(record.venue || '').trim(),
-        player_name: playerName,
-        player_key: makePlayerKey_(playerName),
+        username_reclub: username,
+        player_name: playerName || username,
+        player_key: username ? makePlayerKeyFromUsername_(username) : makePlayerKey_(playerName),
         matches_played: Number(record.matches_played || 0),
         wins: Number(record.wins || 0),
         losses: Number(record.losses || 0),
         points: Number(record.points || 0),
         notes: String(record.notes || '').trim(),
       };
-      return header.map((key) => enriched[key] || '');
+      return sheetHeaders.map((key) => enriched[key] || '');
     });
 
   if (!rows.length) {
     throw new Error('Tidak ada performance record valid untuk ditulis.');
   }
 
-  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, header.length).setValues(rows);
-  sheet.autoResizeColumns(1, header.length);
+  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, sheetHeaders.length).setValues(rows);
+  sheet.autoResizeColumns(1, sheetHeaders.length);
 }
 
 function getPerformanceSummary_() {
@@ -643,11 +641,13 @@ function getPerformanceSummary_() {
 
   const byPlayer = {};
   records.forEach((record) => {
-    const playerKey = String(record.player_key || makePlayerKey_(record.player_name)).trim();
+    const username = normalizeUsername_(record.username_reclub);
+    const playerKey = String(record.player_key || (username ? makePlayerKeyFromUsername_(username) : makePlayerKey_(record.player_name))).trim();
     if (!playerKey) return;
     if (!byPlayer[playerKey]) {
       byPlayer[playerKey] = {
         player_name: record.player_name,
+        username_reclub: normalizeUsername_(record.username_reclub),
         total_points: 0,
         matches_played: 0,
         wins: 0,
@@ -658,6 +658,7 @@ function getPerformanceSummary_() {
     }
     const player = byPlayer[playerKey];
     player.player_name = record.player_name || player.player_name;
+    player.username_reclub = normalizeUsername_(record.username_reclub) || player.username_reclub;
     player.total_points += Number(record.points || 0);
     player.matches_played += Number(record.matches_played || 0);
     player.wins += Number(record.wins || 0);
@@ -673,6 +674,7 @@ function getPerformanceSummary_() {
       const totalMatches = Number(player.matches_played || 0);
       return {
         player_name: player.player_name,
+        username_reclub: player.username_reclub,
         total_points: player.total_points,
         matches_played: totalMatches,
         wins: player.wins,
@@ -892,6 +894,7 @@ function getPerformanceHeader_() {
     'session_code',
     'session_date',
     'venue',
+    'username_reclub',
     'player_name',
     'player_key',
     'matches_played',

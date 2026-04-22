@@ -93,7 +93,10 @@ with page_size_col:
 
 table = public_leaderboard.copy()
 if search_query.strip():
-    table = table[table["player_name"].str.contains(search_query.strip(), case=False, na=False)]
+    query = search_query.strip()
+    name_matches = table["player_name"].str.contains(query, case=False, na=False)
+    username_matches = table["username_reclub"].str.contains(query.lstrip("@"), case=False, na=False)
+    table = table[name_matches | username_matches]
 
 if table.empty:
     st.info("Nama player tidak ditemukan di periode ini.")
@@ -115,6 +118,7 @@ st.dataframe(
     column_config={
         "rank": "Rank",
         "player_name": "Nama",
+        "username_reclub": "Username",
         "total_session": "Session",
         "total_stamp": "Stamp",
         "last_played": "Last played",

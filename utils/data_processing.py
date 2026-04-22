@@ -265,7 +265,7 @@ def build_leaderboard(df: pd.DataFrame, period: str = "All time", venue: str = "
     leaderboard = build_player_summary(filtered)
     if leaderboard.empty:
         return leaderboard
-    leaderboard = leaderboard[["player_name", "phone", "total_session", "total_stamp", "last_played"]].copy()
+    leaderboard = leaderboard[["player_name", "username_reclub", "phone", "total_session", "total_stamp", "last_played"]].copy()
     leaderboard.insert(0, "rank", range(1, len(leaderboard) + 1))
     return leaderboard
 

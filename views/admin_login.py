@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from utils.auth import authenticate_admin, get_admin_password, is_admin_authenticated
+from utils.auth import authenticate_admin, get_admin_password, is_admin_authenticated, login_admin
 
 
 st.title("Admin Login")
@@ -23,7 +23,7 @@ with st.form("admin_login_form"):
 
 if submitted:
     if authenticate_admin(password):
-        st.session_state.admin_authenticated = True
+        login_admin()
         st.success("Login berhasil.")
         st.rerun()
     else:

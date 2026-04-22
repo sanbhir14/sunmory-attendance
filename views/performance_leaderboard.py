@@ -31,7 +31,7 @@ def prepare_records(records: pd.DataFrame) -> pd.DataFrame:
             clean[column] = 0
         clean[column] = pd.to_numeric(clean[column], errors="coerce").fillna(0)
 
-    for column in ["player_name", "player_key", "session_id", "venue"]:
+    for column in ["player_name", "username_reclub", "player_key", "session_id", "venue"]:
         if column not in clean.columns:
             clean[column] = ""
         clean[column] = clean[column].astype(str).fillna("").str.strip()
@@ -42,7 +42,8 @@ def prepare_records(records: pd.DataFrame) -> pd.DataFrame:
     clean["session_date_dt"] = pd.to_datetime(clean["session_date"], errors="coerce")
     clean["month_key"] = clean["session_date_dt"].dt.strftime("%Y-%m")
     clean["player_group"] = clean["player_key"]
-    clean.loc[clean["player_group"] == "", "player_group"] = clean["player_name"].str.lower()
+    clean.loc[clean["player_group"] == "", "player_group"] = "reclub::" + clean["username_reclub"].str.lower()
+    clean.loc[clean["player_group"] == "reclub::", "player_group"] = clean["player_name"].str.lower()
     return clean
 
 
@@ -60,6 +61,7 @@ def aggregate_ranking(records: pd.DataFrame) -> pd.DataFrame:
             columns=[
                 "rank",
                 "player_name",
+                "username_reclub",
                 "sessions",
                 "total_points",
                 "avg_points",
@@ -69,6 +71,7 @@ def aggregate_ranking(records: pd.DataFrame) -> pd.DataFrame:
 
     grouped = records.groupby("player_group", dropna=False).agg(
         player_name=("player_name", "last"),
+        username_reclub=("username_reclub", "last"),
         sessions=("session_id", lambda value: value.replace("", pd.NA).nunique()),
         total_points=("points", "sum"),
         matches_played=("matches_played", "sum"),
@@ -154,7 +157,10 @@ with page_size_col:
 
 table = ranking.copy()
 if search_query.strip():
-    table = table[table["player_name"].str.contains(search_query.strip(), case=False, na=False)]
+    query = search_query.strip()
+    name_matches = table["player_name"].str.contains(query, case=False, na=False)
+    username_matches = table["username_reclub"].str.contains(query.lstrip("@"), case=False, na=False)
+    table = table[name_matches | username_matches]
 
 if table.empty:
     st.info("Nama player tidak ditemukan di periode ini.")
@@ -170,6 +176,7 @@ display = table.iloc[start:end][
     [
         "rank",
         "player_name",
+        "username_reclub",
         "sessions",
         "total_points",
         "avg_points",
@@ -188,6 +195,7 @@ st.dataframe(
     column_config={
         "rank": "Rank",
         "player_name": "Nama",
+        "username_reclub": "Username",
         "sessions": "Sessions",
         "total_points": "Total poin",
         "avg_points": "Avg",
@@ -197,6 +205,6 @@ st.dataframe(
 
 with st.expander("Recent performance records"):
     recent = filtered_records.sort_values("session_date_dt", ascending=False).head(20)
-    public_columns = ["session_date", "venue", "player_name", "matches_played", "wins", "losses", "points"]
+    public_columns = ["session_date", "venue", "username_reclub", "player_name", "matches_played", "wins", "losses", "points"]
     existing_columns = [column for column in public_columns if column in recent.columns]
     st.dataframe(recent[existing_columns], hide_index=True, use_container_width=True)
