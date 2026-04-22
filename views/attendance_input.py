@@ -4,11 +4,9 @@ import pandas as pd
 import streamlit as st
 
 from utils.attendance import (
-    calculate_income_amount,
     eligible_reward_options,
     load_attendance_records,
     load_players_db,
-    reward_discount_amount,
     reward_discount_percent,
     submit_attendance,
 )
@@ -115,8 +113,8 @@ with st.form("attendance_input_form"):
     reward_options = eligible_reward_options(selected_player) if selected_player else ["Tidak claim reward"]
     claimed_reward = st.selectbox("Claim reward", reward_options)
     discount_percent = reward_discount_percent(claimed_reward)
-    discount_amount = reward_discount_amount(claimed_reward)
-    income_amount = calculate_income_amount(base_price, claimed_reward)
+    discount_amount = 20_000 if claimed_reward == "Free coffee" else 0
+    income_amount = max(int(round(base_price * (100 - discount_percent) / 100)) - discount_amount, 0)
     if claimed_reward == "Free coffee":
         st.info("Free coffee memotong Rp 20,000 dari harga session player ini.")
     discount_label = f"-{discount_percent}% discount" if discount_percent else (f"-Rp {discount_amount:,}" if discount_amount else None)
