@@ -104,6 +104,20 @@ def reward_discount_percent(reward_name: str) -> int:
     }.get(reward_name, 0)
 
 
+def reward_discount_amount(reward_name: str) -> int:
+    return {
+        "Free coffee": 20_000,
+    }.get(reward_name, 0)
+
+
+def calculate_income_amount(base_price: int | float, reward_name: str) -> int:
+    price = int(float(base_price or 0))
+    percent = reward_discount_percent(reward_name)
+    fixed_discount = reward_discount_amount(reward_name)
+    income = round(price * (100 - percent) / 100) - fixed_discount
+    return max(int(income), 0)
+
+
 def rebuild_players_db() -> tuple[bool, str]:
     webhook_url = performance_webhook_url()
     if not webhook_url:

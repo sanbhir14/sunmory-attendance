@@ -222,9 +222,12 @@ function appendAttendance_(record) {
 
   const existingAttendance = recordsFromSheet_(sheet);
   const duplicate = existingAttendance.some((row) => (
-    String(row.player_key || '').trim() === playerKey
+    String(row.attendance_type || 'regular').trim() !== 'referral_bonus'
     && String(row.session_id || '').trim() === sessionId
-    && String(row.attendance_type || 'regular').trim() !== 'referral_bonus'
+    && (
+      String(row.player_key || '').trim() === playerKey
+      || normalizeUsername_(row.username_reclub) === username
+    )
   ));
   if (duplicate) {
     throw new Error(`${username} sudah check-in di session ini.`);
@@ -1068,10 +1071,17 @@ function getRewardDiscountPercent_(reward) {
   return 0;
 }
 
+function getRewardDiscountAmount_(reward) {
+  const cleaned = normalizeClaimedReward_(reward);
+  if (cleaned === 'Free coffee') return 20000;
+  return 0;
+}
+
 function calculateIncomeAmount_(basePrice, reward) {
   const price = Number(basePrice || 0);
   const discount = getRewardDiscountPercent_(reward);
-  return Math.round(price * (100 - discount) / 100);
+  const fixedDiscount = getRewardDiscountAmount_(reward);
+  return Math.max(Math.round(price * (100 - discount) / 100) - fixedDiscount, 0);
 }
 
 function makePlayerKeyFromUsername_(username) {
